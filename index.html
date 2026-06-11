@@ -284,10 +284,15 @@
             })
             .then(res => res.json())
             .then(data => {
-                alert(data.message);
-                fileInput.value = "";
-                closeModal();
-                loadChannels();
+                // যদি message না থাকে, তবে detail বা আসল এররটি দেখাবে
+                if(data.message) {
+                    alert(data.message);
+                    fileInput.value = "";
+                    closeModal();
+                    loadChannels();
+                } else {
+                    alert("Error: " + JSON.stringify(data.detail));
+                }
             })
             .catch(err => {
                 console.error("Error uploading file:", err);
