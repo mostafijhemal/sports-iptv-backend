@@ -65,6 +65,19 @@
         .hidden { display: none !important; }
 
         @media (max-width: 768px) { .video-js { height: 250px; } header { flex-direction: column; gap: 10px; } .now-playing { flex-direction: column; gap: 10px; text-align: center; } }
+
+        /* --- Mobile Fullscreen Fix --- */
+        .video-js.vjs-fullscreen {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 999999 !important;
+        }
+        body.vjs-full-window {
+            overflow: hidden !important;
+        }
     </style>
 </head>
 <body>
@@ -84,7 +97,7 @@
 
         <div id="video-section" class="hidden">
             <div class="video-wrapper">
-                <video id="my-video" class="video-js vjs-default-skin vjs-big-play-centered" controls preload="auto" data-setup="{}">
+                <video id="my-video" class="video-js vjs-default-skin vjs-big-play-centered" controls preload="auto" playsinline data-setup="{}" crossorigin="anonymous">
                     <source src="" type="application/x-mpegURL">
                 </video>
             </div>
