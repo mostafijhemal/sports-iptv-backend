@@ -20,7 +20,6 @@
 
         .container { max-width: 1000px; margin: 0 auto; padding: 0 20px; }
 
-        /* ভিডিও সেকশন ডিজাইন */
         #video-section { margin-bottom: 30px; }
         .video-wrapper { background: #000; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.7); border: 2px solid #2a2a35; }
         .video-js { width: 100%; height: 500px; }
@@ -28,7 +27,6 @@
         .now-playing { margin: 20px 0; font-size: 1.2rem; font-weight: 600; color: #a0a0b0; display: flex; justify-content: space-between; align-items: center; background: #1a1a24; padding: 15px 20px; border-radius: 10px;}
         .now-playing span { color: #fff; }
         
-        /* ভিডিও বন্ধ করার বাটন */
         .close-player-btn { background: #ff2a5f; color: white; border: none; padding: 8px 20px; border-radius: 25px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 0.9rem; transition: 0.3s; }
         .close-player-btn:hover { background: #d11f4a; }
 
@@ -45,9 +43,8 @@
         .delete-btn { background: #ff2a5f; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-top: 10px; font-size: 0.8rem; width: 100%; }
         .delete-btn:hover { background: #d11f4a; }
 
-        /* পপ-আপ (Modal) ডিজাইন */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-        .admin-panel { background: #1a1a24; padding: 30px; border-radius: 12px; border: 1px dashed #ff2a5f; width: 90%; max-width: 500px; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
+        .admin-panel { background: #1a1a24; padding: 30px; border-radius: 12px; border: 1px dashed #ff2a5f; width: 90%; max-width: 500px; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.8); max-height: 90vh; overflow-y: auto;}
         .close-modal { position: absolute; top: 15px; right: 20px; color: #888; font-size: 28px; font-weight: bold; cursor: pointer; transition: 0.3s; }
         .close-modal:hover { color: #ff2a5f; }
         .admin-panel h2 { color: #ff2a5f; margin-bottom: 20px; text-align: center; font-size: 1.5rem; }
@@ -70,7 +67,7 @@
     <div class="container">
         
         <div id="admin-actions" class="hidden" style="text-align: center; margin-bottom: 20px;">
-            <button onclick="openModal()" style="background: #ff2a5f; color: white; border: none; padding: 12px 30px; border-radius: 25px; font-weight: 800; font-size: 1.1rem; cursor: pointer;">+ Add New Channel</button>
+            <button onclick="openModal()" style="background: #ff2a5f; color: white; border: none; padding: 12px 30px; border-radius: 25px; font-weight: 800; font-size: 1.1rem; cursor: pointer;">+ Add Channels</button>
         </div>
 
         <div id="video-section" class="hidden">
@@ -90,6 +87,7 @@
             <button class="filter-btn active" onclick="filterChannels('All', this)">All</button>
             <button class="filter-btn" onclick="filterChannels('Cricket', this)">Cricket</button>
             <button class="filter-btn" onclick="filterChannels('Football', this)">Football</button>
+            <button class="filter-btn" onclick="filterChannels('Sports', this)">Sports</button>
         </div>
 
         <div class="channel-grid" id="channels"></div>
@@ -97,25 +95,29 @@
         <div id="channel-modal" class="modal-overlay hidden">
             <div class="admin-panel">
                 <span class="close-modal" onclick="closeModal()">&times;</span>
-                <h2>⚙️ Add New Live Channel</h2>
+                
+                <h2>⚙️ Add Single Channel</h2>
                 <form id="add-channel-form">
                     <div class="form-group">
-                        <label>Channel Name</label>
-                        <input type="text" id="channel-name" required>
+                        <input type="text" id="channel-name" placeholder="Channel Name" required>
                     </div>
                     <div class="form-group">
-                        <label>Category</label>
-                        <select id="channel-category" required>
-                            <option value="Cricket">Cricket</option>
-                            <option value="Football">Football</option>
-                        </select>
+                        <input type="text" id="channel-category" placeholder="Category (e.g., Cricket)" required>
                     </div>
                     <div class="form-group">
-                        <label>M3U8 Streaming URL</label>
-                        <input type="url" id="channel-url" required>
+                        <input type="url" id="channel-url" placeholder="M3U8 Streaming URL" required>
                     </div>
                     <button type="submit" class="submit-btn">Save Channel</button>
                 </form>
+
+                <hr style="border: 1px dashed #333; margin: 25px 0;">
+
+                <h2 style="font-size: 1.2rem;">📂 Bulk Upload (M3U Playlist)</h2>
+                <div class="form-group">
+                    <input type="file" id="m3u-file" accept=".m3u,.m3u8" style="padding: 10px; background: #2a2a35; border-radius: 8px; width: 100%;">
+                </div>
+                <button onclick="uploadM3UFile()" style="background: #007bff;" class="submit-btn">Upload & Extract</button>
+
             </div>
         </div>
 
@@ -123,23 +125,27 @@
 
     <script src="https://vjs.zencdn.net/8.3.0/video.min.js"></script>
     <script>
+        // ==========================================
+        // এখানে আপনার রেন্ডারের লাইভ API লিংকটি দিন 
+        // (শেষের স্ল্যাশ '/' ছাড়া)
+        // ==========================================
+        const API_BASE_URL = 'https://sports-iptv-backend.onrender.com';
+
         const player = videojs('my-video');
         const channelGrid = document.getElementById('channels');
         const adminActions = document.getElementById('admin-actions');
         const authBtn = document.getElementById('auth-btn');
         const modal = document.getElementById('channel-modal');
-        const videoSection = document.getElementById('video-section'); // ভিডিও সেকশন ধরা হলো
+        const videoSection = document.getElementById('video-section');
         let allChannelsData = [];
 
         let isAdmin = localStorage.getItem('isAdmin') === 'true';
 
-        // ভিডিও প্লেয়ার বন্ধ করার ফাংশন
         function closePlayer() {
-            videoSection.classList.add('hidden'); // প্লেয়ার লুকানো
-            player.pause(); // ব্যাকগ্রাউন্ডে ভিডিও চলা বন্ধ করা
+            videoSection.classList.add('hidden');
+            player.pause();
         }
 
-        // পপ-আপ ফাংশন
         function openModal() { modal.classList.remove('hidden'); }
         function closeModal() { modal.classList.add('hidden'); }
         window.onclick = function(event) { if (event.target === modal) closeModal(); }
@@ -153,7 +159,7 @@
             } else {
                 const password = prompt("Enter Admin Password:");
                 if(password) {
-                    fetch('https://sports-iptv-backend.onrender.com/api/login', {
+                    fetch(`${API_BASE_URL}/api/login`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ password: password })
@@ -185,7 +191,7 @@
         }
 
         function loadChannels() {
-            fetch('https://sports-iptv-backend.onrender.com/api/channels')
+            fetch(`${API_BASE_URL}/api/channels`)
                 .then(res => res.json())
                 .then(data => {
                     allChannelsData = data;
@@ -200,13 +206,12 @@
                 card.className = 'channel-card';
                 card.innerHTML = `<h3>${channel.name}</h3><p>${channel.category}</p>`;
                 
-                // চ্যানেলে ক্লিক করলে ভিডিও প্লেয়ার সামনে আসবে এবং প্লে হবে
                 card.onclick = () => {
-                    videoSection.classList.remove('hidden'); // ভিডিও সেকশন শো করবে
+                    videoSection.classList.remove('hidden');
                     player.src({ type: 'application/x-mpegURL', src: channel.url });
                     player.play();
                     document.getElementById('current-channel-name').innerText = channel.name;
-                    window.scrollTo({ top: 0, behavior: 'smooth' }); // স্ক্রল করে উপরে চলে যাবে
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                 };
 
                 if(isAdmin) {
@@ -226,7 +231,7 @@
 
         function deleteChannel(id) {
             if(confirm("Are you sure you want to delete this channel?")) {
-                fetch(`https://sports-iptv-backend.onrender.com/api/channels/${id}`, { method: 'DELETE' })
+                fetch(`${API_BASE_URL}/api/channels/${id}`, { method: 'DELETE' })
                 .then(res => res.json())
                 .then(data => {
                     loadChannels();
@@ -238,7 +243,7 @@
             document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
             btnElement.classList.add('active');
             if(category === 'All') displayChannels(allChannelsData);
-            else displayChannels(allChannelsData.filter(ch => ch.category === category));
+            else displayChannels(allChannelsData.filter(ch => ch.category.toLowerCase().includes(category.toLowerCase())));
         }
 
         document.getElementById('add-channel-form').addEventListener('submit', function(e) {
@@ -248,7 +253,7 @@
                 category: document.getElementById('channel-category').value,
                 url: document.getElementById('channel-url').value
             };
-            fetch('https://sports-iptv-backend.onrender.com/api/channels', {
+            fetch(`${API_BASE_URL}/api/channels`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newChannel)
@@ -260,6 +265,35 @@
                 loadChannels();
             });
         });
+
+        function uploadM3UFile() {
+            const fileInput = document.getElementById('m3u-file');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert("Please select an M3U file first.");
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append("file", file);
+
+            fetch(`${API_BASE_URL}/api/upload-m3u`, { 
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                alert(data.message);
+                fileInput.value = "";
+                closeModal();
+                loadChannels();
+            })
+            .catch(err => {
+                console.error("Error uploading file:", err);
+                alert("Something went wrong!");
+            });
+        }
 
         updateUI();
         loadChannels();

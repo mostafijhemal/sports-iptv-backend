@@ -1,7 +1,8 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import sqlite3
+import re
 
 app = FastAPI()
 
@@ -42,8 +43,6 @@ def init_db():
 
 init_db()
 
-# --- API Endpoints ---
-
 @app.get("/")
 def read_root():
     return {"message": "Welcome to Sports IPTV API"}
@@ -65,7 +64,6 @@ def add_channel(channel: ChannelCreate):
     conn.close()
     return {"message": "Channel added successfully!"}
 
-# চ্যানেল ডিলিট করার API
 @app.delete("/api/channels/{channel_id}")
 def delete_channel(channel_id: int):
     conn = get_db_connection()
@@ -75,10 +73,42 @@ def delete_channel(channel_id: int):
     conn.close()
     return {"message": "Channel deleted successfully!"}
 
-# লগইন চেক করার API
 @app.post("/api/login")
 def login(data: LoginData):
-    if data.password == "admin123":  # অ্যাডমিন পাসওয়ার্ড
+    if data.password == "admin123":
         return {"success": True, "message": "Login successful"}
     else:
         raise HTTPException(status_code=401, detail="Invalid password")
+
+@app.post("/api/upload-m3u")
+async def upload_m3u(file: UploadFile = File(...)):
+    content = await file.read()
+    content_str = content.decode("utf-8", errors="ignore")
+    lines = content_str.splitlines()
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    current_name = "Unknown Channel"
+    current_category = "General"
+
+    for line in lines:
+        line = line.strip()
+        if line.startswith("#EXTINF"):
+            name_match = re.search(r',(.*)$', line)
+            if name_match:
+                current_name = name_match.group(1).strip()
+            
+            cat_match = re.search(r'group-title="([^"]+)"', line)
+            if cat_match:
+                current_category = cat_match.group(1).strip()
+                
+        elif line.startswith("http"):
+            cursor.execute('INSERT INTO channels (name, category, url) VALUES (?, ?, ?)',
+                           (current_name, current_category, line))
+            current_name = "Unknown Channel"
+            current_category = "General"
+
+    conn.commit()
+    conn.close()
+    return {"message": "Playlist uploaded and channels extracted successfully!"}
