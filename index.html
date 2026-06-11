@@ -18,31 +18,41 @@
         .auth-btn { background: #23232f; color: white; border: 1px solid #ff2a5f; padding: 8px 20px; border-radius: 25px; cursor: pointer; font-weight: 600; transition: 0.3s; }
         .auth-btn:hover { background: #ff2a5f; }
 
-        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 0 20px; }
 
-        /* --- নতুন টু-কলাম লেআউট (বাম: চ্যানেল, ডান: ভিডিও) --- */
+        /* --- আপডেট করা লেআউট: ভিডিও বামে (৭৫%), চ্যানেল ডানে (২৫%) --- */
         .main-layout {
             display: flex;
-            flex-direction: column-reverse; /* মোবাইলে ভিডিও উপরে, চ্যানেল নিচে থাকবে */
+            flex-direction: column; /* মোবাইলের জন্য: ভিডিও উপরে, চ্যানেল নিচে */
             gap: 20px;
         }
 
+        .video-area { 
+            width: 100%; 
+            position: sticky; /* মোবাইলের জন্য স্টিকি */
+            top: 0; 
+            z-index: 999;
+            background: #0f0f13; /* চ্যানেল স্ক্রল করার সময় পেছনে ঢাকা পড়বে */
+            padding-top: 10px;
+            padding-bottom: 15px;
+        }
+
         .channels-area { width: 100%; }
-        .video-area { width: 100%; margin-bottom: 20px;}
 
         @media (min-width: 992px) {
             .main-layout {
-                flex-direction: row; /* পিসিতে পাশাপাশি থাকবে */
+                flex-direction: row; /* পিসির জন্য: ভিডিও বামে, চ্যানেল ডানে */
                 align-items: flex-start;
                 gap: 30px;
             }
-            .channels-area { width: 60%; }
             .video-area { 
-                width: 40%; 
-                position: sticky; /* পিসিতে ডানপাশে ভিডিও স্টিকি থাকবে */
-                top: 20px; 
-                margin-bottom: 0;
-                z-index: 99;
+                width: 75%; /* ভিডিও প্লেয়ার ৭৫% জায়গা নেবে */
+                top: 20px; /* পিসিতে উপর থেকে একটু ফাঁকা থাকবে */
+                padding-top: 0;
+                padding-bottom: 0;
+            }
+            .channels-area { 
+                width: 25%; /* চ্যানেল লিস্ট ২৫% জায়গা নেবে */
             }
         }
 
@@ -54,15 +64,15 @@
         .close-player-btn { background: #ff2a5f; color: white; border: none; padding: 8px 20px; border-radius: 25px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 0.9rem; transition: 0.3s; }
         .close-player-btn:hover { background: #d11f4a; }
 
-        .filters { display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; }
-        .filter-btn { background: #23232f; border: 2px solid transparent; padding: 8px 20px; color: white; border-radius: 25px; cursor: pointer; font-weight: 600; transition: all 0.3s ease; }
+        .filters { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center;}
+        .filter-btn { background: #23232f; border: 2px solid transparent; padding: 8px 15px; color: white; border-radius: 25px; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: all 0.3s ease; }
         .filter-btn:hover, .filter-btn.active { border-color: #ff2a5f; background: #2a2a35; box-shadow: 0 4px 15px rgba(255, 42, 95, 0.3); }
 
-        .channel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 50px; }
-        .channel-card { background: #23232f; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s ease; border: 2px solid transparent; position: relative; }
-        .channel-card h3 { font-size: 1rem; margin-bottom: 5px; }
-        .channel-card p { font-size: 0.8rem; color: #888; }
-        .channel-card:hover { transform: translateY(-5px); border-color: #ff2a5f; box-shadow: 0 8px 20px rgba(255, 42, 95, 0.3); background: #2a2a35; }
+        .channel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-bottom: 50px; }
+        .channel-card { background: #23232f; border-radius: 10px; padding: 15px; text-align: center; cursor: pointer; transition: all 0.3s ease; border: 2px solid transparent; position: relative; }
+        .channel-card h3 { font-size: 0.9rem; margin-bottom: 5px; }
+        .channel-card p { font-size: 0.75rem; color: #888; }
+        .channel-card:hover { transform: translateY(-3px); border-color: #ff2a5f; box-shadow: 0 8px 20px rgba(255, 42, 95, 0.3); background: #2a2a35; }
 
         .delete-btn { background: #ff2a5f; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-top: 10px; font-size: 0.8rem; width: 100%; }
         .delete-btn:hover { background: #d11f4a; }
@@ -82,7 +92,7 @@
         
         .hidden { display: none !important; }
 
-        @media (max-width: 768px) { header { flex-direction: column; gap: 10px; } .now-playing { flex-direction: column; gap: 10px; text-align: center; } .filters { justify-content: center;} }
+        @media (max-width: 768px) { header { flex-direction: column; gap: 10px; } .now-playing { flex-direction: column; gap: 10px; text-align: center; } }
     </style>
 </head>
 <body>
@@ -101,13 +111,7 @@
         </div>
 
         <div class="main-layout">
-            <div class="channels-area">
-                <div class="filters" id="dynamic-filters">
-                    <button class="filter-btn active" onclick="filterChannels('All', this)">All</button>
-                </div>
-                <div class="channel-grid" id="channels"></div>
-            </div>
-
+            
             <div class="video-area hidden" id="video-section">
                 <div class="video-wrapper">
                     <video id="my-video" class="video-js vjs-default-skin vjs-big-play-centered vjs-fluid" controls preload="auto" playsinline data-setup="{}" crossorigin="anonymous">
@@ -119,6 +123,14 @@
                     <button onclick="closePlayer()" class="close-player-btn">✖ Close Video</button>
                 </div>
             </div>
+
+            <div class="channels-area">
+                <div class="filters" id="dynamic-filters">
+                    <button class="filter-btn active" onclick="filterChannels('All', this)">All</button>
+                </div>
+                <div class="channel-grid" id="channels"></div>
+            </div>
+
         </div>
 
         <div id="add-modal" class="modal-overlay hidden">
@@ -176,17 +188,26 @@
 
         let isAdmin = localStorage.getItem('isAdmin') === 'true';
 
-        // --- মোবাইলে ফুলস্ক্রিন করলে অটো-রোটেট (Landscape) করার লজিক ---
+        // --- আপডেট: মোবাইলে ফুলস্ক্রিন অটো-রোটেট (Landscape) ---
         player.on('fullscreenchange', function() {
             if (player.isFullscreen()) {
+                // অ্যান্ড্রয়েড এবং সাপোর্টেড ব্রাউজারের জন্য
                 if (screen.orientation && screen.orientation.lock) {
                     screen.orientation.lock('landscape').catch(function(error) {
-                        console.log('Auto-rotate not supported on this device/browser.');
+                        console.log('Auto-rotate blocked by browser:', error);
                     });
+                } else if (screen.lockOrientation) {
+                    screen.lockOrientation('landscape');
+                } else if (screen.mozLockOrientation) {
+                    screen.mozLockOrientation('landscape');
+                } else if (screen.msLockOrientation) {
+                    screen.msLockOrientation('landscape');
                 }
             } else {
                 if (screen.orientation && screen.orientation.unlock) {
                     screen.orientation.unlock();
+                } else if (screen.unlockOrientation) {
+                    screen.unlockOrientation();
                 }
             }
         });
@@ -269,10 +290,8 @@
                     player.play();
                     document.getElementById('current-channel-name').innerText = channel.name;
                     
-                    // মোবাইলে ক্লিক করলে প্লেয়ারটি উপরে স্ক্রল করে নিয়ে আসবে
+                    // প্লেয়ারে স্ক্রল করে নিয়ে আসা
                     if (window.innerWidth <= 992) {
-                        videoSection.scrollIntoView({ behavior: 'smooth' });
-                    } else {
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                     }
                 };
