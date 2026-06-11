@@ -246,8 +246,13 @@
                 fetch(`${API_BASE_URL}/api/channels/all`, { method: 'DELETE' })
                 .then(res => res.json())
                 .then(data => {
-                    alert(data.message);
-                    loadChannels(); // ডিলিট হওয়ার পর লিস্ট রিফ্রেশ করে ফাঁকা করে দেবে
+                    // যদি message থাকে, তবে সেটি দেখাবে, না হলে detail (আসল এরর) দেখাবে
+                    if (data.message) {
+                        alert(data.message);
+                        loadChannels();
+                    } else {
+                        alert("Error: " + JSON.stringify(data.detail));
+                    }
                 })
                 .catch(err => console.error("Error deleting all channels:", err));
             }
