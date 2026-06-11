@@ -21,39 +21,20 @@
         .container { max-width: 1400px; margin: 0 auto; padding: 0 20px; }
 
         /* --- আপডেট করা লেআউট: ভিডিও বামে (৭৫%), চ্যানেল ডানে (২৫%) --- */
-        .main-layout {
-            display: flex;
-            flex-direction: column; /* মোবাইলের জন্য: ভিডিও উপরে, চ্যানেল নিচে */
-            gap: 20px;
-        }
+        .main-layout { display: flex; flex-direction: column; gap: 20px; transition: all 0.3s ease; }
 
-        .video-area { 
-            width: 100%; 
-            position: sticky; /* মোবাইলের জন্য স্টিকি */
-            top: 0; 
-            z-index: 999;
-            background: #0f0f13; /* চ্যানেল স্ক্রল করার সময় পেছনে ঢাকা পড়বে */
-            padding-top: 10px;
-            padding-bottom: 15px;
-        }
-
-        .channels-area { width: 100%; }
+        .video-area { width: 100%; position: sticky; top: 0; z-index: 999; background: #0f0f13; padding-top: 10px; padding-bottom: 15px; }
+        .channels-area { width: 100%; transition: width 0.4s ease; }
 
         @media (min-width: 992px) {
-            .main-layout {
-                flex-direction: row; /* পিসির জন্য: ভিডিও বামে, চ্যানেল ডানে */
-                align-items: flex-start;
-                gap: 30px;
-            }
-            .video-area { 
-                width: 75%; /* ভিডিও প্লেয়ার ৭৫% জায়গা নেবে */
-                top: 20px; /* পিসিতে উপর থেকে একটু ফাঁকা থাকবে */
-                padding-top: 0;
-                padding-bottom: 0;
-            }
-            .channels-area { 
-                width: 25%; /* চ্যানেল লিস্ট ২৫% জায়গা নেবে */
-            }
+            .main-layout { flex-direction: row; align-items: flex-start; gap: 30px; }
+            .video-area { width: 75%; top: 20px; padding-top: 0; padding-bottom: 0; }
+            
+            /* ডিফল্টভাবে চ্যানেল লিস্ট ১০০% থাকবে */
+            .channels-area { width: 100%; } 
+            
+            /* ভিডিও প্লে হলে চ্যানেল লিস্ট ২৫% হয়ে যাবে */
+            .main-layout.video-playing .channels-area { width: 25%; }
         }
 
         .video-wrapper { background: #000; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.9); border: 2px solid #2a2a35; }
@@ -183,36 +164,44 @@
         const adminActions = document.getElementById('admin-actions');
         const authBtn = document.getElementById('auth-btn');
         const videoSection = document.getElementById('video-section');
+        const mainLayout = document.querySelector('.main-layout');
         let allChannelsData = [];
         let uniqueCategories = [];
 
         let isAdmin = localStorage.getItem('isAdmin') === 'true';
 
         // --- আপডেট: মোবাইলে ফুলস্ক্রিন অটো-রোটেট (Landscape) ---
-        player.on('fullscreenchange', function() {
+        player.on('fullscreenchange', async function() {
             if (player.isFullscreen()) {
-                // অ্যান্ড্রয়েড এবং সাপোর্টেড ব্রাউজারের জন্য
-                if (screen.orientation && screen.orientation.lock) {
-                    screen.orientation.lock('landscape').catch(function(error) {
-                        console.log('Auto-rotate blocked by browser:', error);
-                    });
-                } else if (screen.lockOrientation) {
-                    screen.lockOrientation('landscape');
-                } else if (screen.mozLockOrientation) {
-                    screen.mozLockOrientation('landscape');
-                } else if (screen.msLockOrientation) {
-                    screen.msLockOrientation('landscape');
+                try {
+                    if (screen.orientation && screen.orientation.lock) {
+                        await screen.orientation.lock('landscape');
+                    } else if (screen.lockOrientation) {
+                        screen.lockOrientation('landscape');
+                    } else if (screen.mozLockOrientation) {
+                        screen.mozLockOrientation('landscape');
+                    } else if (screen.msLockOrientation) {
+                        screen.msLockOrientation('landscape');
+                    }
+                } catch (error) {
+                    console.log('Browser blocked auto-rotate:', error);
                 }
             } else {
-                if (screen.orientation && screen.orientation.unlock) {
-                    screen.orientation.unlock();
-                } else if (screen.unlockOrientation) {
-                    screen.unlockOrientation();
-                }
+                try {
+                    if (screen.orientation && screen.orientation.unlock) {
+                        screen.orientation.unlock();
+                    } else if (screen.unlockOrientation) {
+                        screen.unlockOrientation();
+                    }
+                } catch (error) {}
             }
         });
 
-        function closePlayer() { videoSection.classList.add('hidden'); player.pause(); }
+        function closePlayer() { 
+            videoSection.classList.add('hidden'); 
+            mainLayout.classList.remove('video-playing'); // চ্যানেল লিস্ট আবার ১০০% হবে
+            player.pause(); 
+        }
 
         function openModal(modalId) { 
             document.getElementById(modalId).classList.remove('hidden'); 
@@ -286,11 +275,14 @@
                 
                 card.onclick = () => {
                     videoSection.classList.remove('hidden');
+                    
+                    // এই নতুন লাইনটি যোগ করা হলো (ভিডিও প্লে হলে চ্যানেল লিস্ট ২৫% হবে)
+                    mainLayout.classList.add('video-playing'); 
+                    
                     player.src({ type: 'application/x-mpegURL', src: channel.url });
                     player.play();
                     document.getElementById('current-channel-name').innerText = channel.name;
                     
-                    // প্লেয়ারে স্ক্রল করে নিয়ে আসা
                     if (window.innerWidth <= 992) {
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                     }
