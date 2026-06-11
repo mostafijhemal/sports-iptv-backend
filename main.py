@@ -73,6 +73,15 @@ def delete_channel(channel_id: int):
     conn.close()
     return {"message": "Channel deleted successfully!"}
 
+@app.delete("/api/channels/all")
+def delete_all_channels():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM channels') # এটি ডেটাবেসের সব চ্যানেল মুছে ফেলবে
+    conn.commit()
+    conn.close()
+    return {"message": "All channels deleted successfully!"}
+
 @app.post("/api/login")
 def login(data: LoginData):
     if data.password == "admin123":

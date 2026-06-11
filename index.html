@@ -66,8 +66,9 @@
 
     <div class="container">
         
-        <div id="admin-actions" class="hidden" style="text-align: center; margin-bottom: 20px;">
-            <button onclick="openModal()" style="background: #ff2a5f; color: white; border: none; padding: 12px 30px; border-radius: 25px; font-weight: 800; font-size: 1.1rem; cursor: pointer;">+ Add Channels</button>
+        <div id="admin-actions" class="hidden" style="display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+            <button onclick="openModal()" style="background: #007bff; color: white; border: none; padding: 12px 30px; border-radius: 25px; font-weight: 800; font-size: 1.1rem; cursor: pointer;">+ Add Channels</button>
+            <button onclick="deleteAllChannels()" style="background: #ff2a5f; color: white; border: none; padding: 12px 30px; border-radius: 25px; font-weight: 800; font-size: 1.1rem; cursor: pointer;">🗑️ Delete All</button>
         </div>
 
         <div id="video-section" class="hidden">
@@ -236,6 +237,19 @@
                 .then(data => {
                     loadChannels();
                 });
+            }
+        }
+
+        // সব চ্যানেল একসাথে ডিলিট করার ফাংশন
+        function deleteAllChannels() {
+            if(confirm("Are you ABSOLUTELY sure you want to delete ALL channels? This cannot be undone!")) {
+                fetch(`${API_BASE_URL}/api/channels/all`, { method: 'DELETE' })
+                .then(res => res.json())
+                .then(data => {
+                    alert(data.message);
+                    loadChannels(); // ডিলিট হওয়ার পর লিস্ট রিফ্রেশ করে ফাঁকা করে দেবে
+                })
+                .catch(err => console.error("Error deleting all channels:", err));
             }
         }
 
