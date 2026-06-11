@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sports IPTV - Premium</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://vjs.zencdn.net/8.3.0/video-js.css" rel="stylesheet" />
+    
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: #0f0f13; color: #ffffff; font-family: 'Poppins', sans-serif; padding-bottom: 50px;}
+
+        header { background-color: #1a1a24; padding: 20px 40px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+        header h1 { color: #ff2a5f; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; font-size: 1.5rem; }
+        
+        .auth-btn { background: #23232f; color: white; border: 1px solid #ff2a5f; padding: 8px 20px; border-radius: 25px; cursor: pointer; font-weight: 600; transition: 0.3s; }
+        .auth-btn:hover { background: #ff2a5f; }
+
+        .container { max-width: 1000px; margin: 0 auto; padding: 0 20px; }
+
+        /* ভিডিও সেকশন ডিজাইন */
+        #video-section { margin-bottom: 30px; }
+        .video-wrapper { background: #000; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.7); border: 2px solid #2a2a35; }
+        .video-js { width: 100%; height: 500px; }
+
+        .now-playing { margin: 20px 0; font-size: 1.2rem; font-weight: 600; color: #a0a0b0; display: flex; justify-content: space-between; align-items: center; background: #1a1a24; padding: 15px 20px; border-radius: 10px;}
+        .now-playing span { color: #fff; }
+        
+        /* ভিডিও বন্ধ করার বাটন */
+        .close-player-btn { background: #ff2a5f; color: white; border: none; padding: 8px 20px; border-radius: 25px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 0.9rem; transition: 0.3s; }
+        .close-player-btn:hover { background: #d11f4a; }
+
+        .filters { display: flex; justify-content: center; gap: 15px; margin-bottom: 30px; flex-wrap: wrap; }
+        .filter-btn { background: #23232f; border: 2px solid transparent; padding: 8px 25px; color: white; border-radius: 25px; cursor: pointer; font-weight: 600; transition: all 0.3s ease; }
+        .filter-btn:hover, .filter-btn.active { border-color: #ff2a5f; background: #2a2a35; box-shadow: 0 4px 15px rgba(255, 42, 95, 0.3); }
+
+        .channel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 50px; }
+        .channel-card { background: #23232f; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s ease; border: 2px solid transparent; position: relative; }
+        .channel-card h3 { font-size: 1rem; margin-bottom: 5px; }
+        .channel-card p { font-size: 0.8rem; color: #888; }
+        .channel-card:hover { transform: translateY(-5px); border-color: #ff2a5f; box-shadow: 0 8px 20px rgba(255, 42, 95, 0.3); background: #2a2a35; }
+
+        .delete-btn { background: #ff2a5f; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-top: 10px; font-size: 0.8rem; width: 100%; }
+        .delete-btn:hover { background: #d11f4a; }
+
+        /* পপ-আপ (Modal) ডিজাইন */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        .admin-panel { background: #1a1a24; padding: 30px; border-radius: 12px; border: 1px dashed #ff2a5f; width: 90%; max-width: 500px; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
+        .close-modal { position: absolute; top: 15px; right: 20px; color: #888; font-size: 28px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .close-modal:hover { color: #ff2a5f; }
+        .admin-panel h2 { color: #ff2a5f; margin-bottom: 20px; text-align: center; font-size: 1.5rem; }
+        .form-group { margin-bottom: 15px; }
+        .form-group input, .form-group select { width: 100%; padding: 12px; border-radius: 8px; border: none; background: #2a2a35; color: white; font-family: 'Poppins', sans-serif; margin-top: 5px; }
+        .submit-btn { width: 100%; background: #ff2a5f; color: white; border: none; padding: 15px; border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 1rem; transition: background 0.3s; }
+        
+        .hidden { display: none !important; }
+
+        @media (max-width: 768px) { .video-js { height: 300px; } header { flex-direction: column; gap: 10px; } .now-playing { flex-direction: column; gap: 10px; text-align: center; } }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Live Sports IPTV</h1>
+        <button id="auth-btn" class="auth-btn" onclick="toggleAuth()">Admin Sign In</button>
+    </header>
+
+    <div class="container">
+        
+        <div id="admin-actions" class="hidden" style="text-align: center; margin-bottom: 20px;">
+            <button onclick="openModal()" style="background: #ff2a5f; color: white; border: none; padding: 12px 30px; border-radius: 25px; font-weight: 800; font-size: 1.1rem; cursor: pointer;">+ Add New Channel</button>
+        </div>
+
+        <div id="video-section" class="hidden">
+            <div class="video-wrapper">
+                <video id="my-video" class="video-js vjs-default-skin vjs-big-play-centered" controls preload="auto" data-setup="{}">
+                    <source src="" type="application/x-mpegURL">
+                </video>
+            </div>
+
+            <div class="now-playing">
+                <div>Now Playing: <span id="current-channel-name">Select a Channel</span></div>
+                <button onclick="closePlayer()" class="close-player-btn">✖ Close Video</button>
+            </div>
+        </div>
+
+        <div class="filters">
+            <button class="filter-btn active" onclick="filterChannels('All', this)">All</button>
+            <button class="filter-btn" onclick="filterChannels('Cricket', this)">Cricket</button>
+            <button class="filter-btn" onclick="filterChannels('Football', this)">Football</button>
+        </div>
+
+        <div class="channel-grid" id="channels"></div>
+
+        <div id="channel-modal" class="modal-overlay hidden">
+            <div class="admin-panel">
+                <span class="close-modal" onclick="closeModal()">&times;</span>
+                <h2>⚙️ Add New Live Channel</h2>
+                <form id="add-channel-form">
+                    <div class="form-group">
+                        <label>Channel Name</label>
+                        <input type="text" id="channel-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="channel-category" required>
+                            <option value="Cricket">Cricket</option>
+                            <option value="Football">Football</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>M3U8 Streaming URL</label>
+                        <input type="url" id="channel-url" required>
+                    </div>
+                    <button type="submit" class="submit-btn">Save Channel</button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://vjs.zencdn.net/8.3.0/video.min.js"></script>
+    <script>
+        const player = videojs('my-video');
+        const channelGrid = document.getElementById('channels');
+        const adminActions = document.getElementById('admin-actions');
+        const authBtn = document.getElementById('auth-btn');
+        const modal = document.getElementById('channel-modal');
+        const videoSection = document.getElementById('video-section'); // ভিডিও সেকশন ধরা হলো
+        let allChannelsData = [];
+
+        let isAdmin = localStorage.getItem('isAdmin') === 'true';
+
+        // ভিডিও প্লেয়ার বন্ধ করার ফাংশন
+        function closePlayer() {
+            videoSection.classList.add('hidden'); // প্লেয়ার লুকানো
+            player.pause(); // ব্যাকগ্রাউন্ডে ভিডিও চলা বন্ধ করা
+        }
+
+        // পপ-আপ ফাংশন
+        function openModal() { modal.classList.remove('hidden'); }
+        function closeModal() { modal.classList.add('hidden'); }
+        window.onclick = function(event) { if (event.target === modal) closeModal(); }
+
+        function toggleAuth() {
+            if (isAdmin) {
+                localStorage.setItem('isAdmin', 'false');
+                isAdmin = false;
+                alert("Logged out successfully!");
+                updateUI();
+            } else {
+                const password = prompt("Enter Admin Password:");
+                if(password) {
+                    fetch('http://127.0.0.1:8000/api/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ password: password })
+                    })
+                    .then(res => {
+                        if(res.ok) {
+                            localStorage.setItem('isAdmin', 'true');
+                            isAdmin = true;
+                            alert("Login successful!");
+                            updateUI();
+                        } else {
+                            alert("Incorrect Password!");
+                        }
+                    });
+                }
+            }
+        }
+
+        function updateUI() {
+            if (isAdmin) {
+                authBtn.innerText = "Sign Out";
+                adminActions.classList.remove('hidden');
+            } else {
+                authBtn.innerText = "Admin Sign In";
+                adminActions.classList.add('hidden');
+                closeModal();
+            }
+            displayChannels(allChannelsData);
+        }
+
+        function loadChannels() {
+            fetch('http://127.0.0.1:8000/api/channels')
+                .then(res => res.json())
+                .then(data => {
+                    allChannelsData = data;
+                    displayChannels(allChannelsData);
+                });
+        }
+
+        function displayChannels(channels) {
+            channelGrid.innerHTML = '';
+            channels.forEach(channel => {
+                const card = document.createElement('div');
+                card.className = 'channel-card';
+                card.innerHTML = `<h3>${channel.name}</h3><p>${channel.category}</p>`;
+                
+                // চ্যানেলে ক্লিক করলে ভিডিও প্লেয়ার সামনে আসবে এবং প্লে হবে
+                card.onclick = () => {
+                    videoSection.classList.remove('hidden'); // ভিডিও সেকশন শো করবে
+                    player.src({ type: 'application/x-mpegURL', src: channel.url });
+                    player.play();
+                    document.getElementById('current-channel-name').innerText = channel.name;
+                    window.scrollTo({ top: 0, behavior: 'smooth' }); // স্ক্রল করে উপরে চলে যাবে
+                };
+
+                if(isAdmin) {
+                    const delBtn = document.createElement('button');
+                    delBtn.className = 'delete-btn';
+                    delBtn.innerText = '🗑️ Delete';
+                    delBtn.onclick = (e) => {
+                        e.stopPropagation(); 
+                        deleteChannel(channel.id);
+                    };
+                    card.appendChild(delBtn);
+                }
+
+                channelGrid.appendChild(card);
+            });
+        }
+
+        function deleteChannel(id) {
+            if(confirm("Are you sure you want to delete this channel?")) {
+                fetch(`http://127.0.0.1:8000/api/channels/${id}`, { method: 'DELETE' })
+                .then(res => res.json())
+                .then(data => {
+                    loadChannels();
+                });
+            }
+        }
+
+        function filterChannels(category, btnElement) {
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+            if(category === 'All') displayChannels(allChannelsData);
+            else displayChannels(allChannelsData.filter(ch => ch.category === category));
+        }
+
+        document.getElementById('add-channel-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const newChannel = {
+                name: document.getElementById('channel-name').value,
+                category: document.getElementById('channel-category').value,
+                url: document.getElementById('channel-url').value
+            };
+            fetch('http://127.0.0.1:8000/api/channels', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newChannel)
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('add-channel-form').reset();
+                closeModal();
+                loadChannels();
+            });
+        });
+
+        updateUI();
+        loadChannels();
+    </script>
+</body>
+</html>
