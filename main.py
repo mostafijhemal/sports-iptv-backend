@@ -22,6 +22,10 @@ class ChannelCreate(BaseModel):
 class LoginData(BaseModel):
     password: str
 
+class CategoryRename(BaseModel):
+    old_name: str
+    new_name: str
+
 def get_db_connection():
     conn = sqlite3.connect('sports_iptv.db')
     conn.row_factory = sqlite3.Row
@@ -73,14 +77,33 @@ def delete_channel(channel_id: int):
     conn.close()
     return {"message": "Channel deleted successfully!"}
 
-@app.delete("/api/channels/all")
+@app.delete("/api/channels/all/delete")
 def delete_all_channels():
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('DELETE FROM channels') # এটি ডেটাবেসের সব চ্যানেল মুছে ফেলবে
+    cursor.execute('DELETE FROM channels')
     conn.commit()
     conn.close()
     return {"message": "All channels deleted successfully!"}
+
+# --- ক্যাটাগরি ম্যানেজমেন্ট API ---
+@app.put("/api/categories")
+def rename_category(data: CategoryRename):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE channels SET category = ? WHERE category = ?', (data.new_name, data.old_name))
+    conn.commit()
+    conn.close()
+    return {"message": f"Category renamed to {data.new_name}!"}
+
+@app.delete("/api/categories/{category_name}")
+def delete_category(category_name: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM channels WHERE category = ?', (category_name,))
+    conn.commit()
+    conn.close()
+    return {"message": f"Category '{category_name}' and its channels deleted!"}
 
 @app.post("/api/login")
 def login(data: LoginData):
@@ -108,7 +131,8 @@ async def upload_m3u(file: UploadFile = File(...)):
             if name_match:
                 current_name = name_match.group(1).strip()
             
-            cat_match = re.search(r'group-title="([^"]+)"', line)
+            # tvg-group বা group-title দুটোই স্ক্যান করবে
+            cat_match = re.search(r'(?:group-title|tvg-group)="([^"]+)"', line, re.IGNORECASE)
             if cat_match:
                 current_category = cat_match.group(1).strip()
                 
