@@ -153,7 +153,7 @@
             } else {
                 const password = prompt("Enter Admin Password:");
                 if(password) {
-                    fetch('http://127.0.0.1:8000/api/login', {
+                    fetch('https://sports-iptv-backend.onrender.com/api/login', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ password: password })
@@ -185,7 +185,7 @@
         }
 
         function loadChannels() {
-            fetch('http://127.0.0.1:8000/api/channels')
+            fetch('https://sports-iptv-backend.onrender.com/api/channels')
                 .then(res => res.json())
                 .then(data => {
                     allChannelsData = data;
@@ -226,7 +226,7 @@
 
         function deleteChannel(id) {
             if(confirm("Are you sure you want to delete this channel?")) {
-                fetch(`http://127.0.0.1:8000/api/channels/${id}`, { method: 'DELETE' })
+                fetch(`https://sports-iptv-backend.onrender.com/api/channels/${id}`, { method: 'DELETE' })
                 .then(res => res.json())
                 .then(data => {
                     loadChannels();
@@ -248,7 +248,7 @@
                 category: document.getElementById('channel-category').value,
                 url: document.getElementById('channel-url').value
             };
-            fetch('http://127.0.0.1:8000/api/channels', {
+            fetch('https://sports-iptv-backend.onrender.com/api/channels', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newChannel)
