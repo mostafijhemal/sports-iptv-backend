@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MR IPTV - Premium</title>
+    <title>Sports IPTV - Premium</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
-    <link href="https://vjs.zencdn.net/8.3.0/video-js.css" rel="stylesheet" />
+    
+    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
     
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -20,7 +21,6 @@
 
         .container { max-width: 1400px; margin: 0 auto; padding: 0 20px; }
 
-        /* --- আপডেট করা লেআউট: ভিডিও বামে (৭৫%), চ্যানেল ডানে (২৫%) --- */
         .main-layout { display: flex; flex-direction: column; gap: 20px; transition: all 0.3s ease; }
 
         .video-area { width: 100%; position: sticky; top: 0; z-index: 999; background: #0f0f13; padding-top: 10px; padding-bottom: 15px; }
@@ -29,15 +29,13 @@
         @media (min-width: 992px) {
             .main-layout { flex-direction: row; align-items: flex-start; gap: 30px; }
             .video-area { width: 75%; top: 20px; padding-top: 0; padding-bottom: 0; }
-            
-            /* ডিফল্টভাবে চ্যানেল লিস্ট ১০০% থাকবে */
             .channels-area { width: 100%; } 
-            
-            /* ভিডিও প্লে হলে চ্যানেল লিস্ট ২৫% হয়ে যাবে */
             .main-layout.video-playing .channels-area { width: 25%; }
         }
 
+        /* Plyr প্লেয়ারের কাস্টম ডিজাইন */
         .video-wrapper { background: #000; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.9); border: 2px solid #2a2a35; }
+        --plyr-color-main: #ff2a5f; /* প্লেয়ারের থিম কালার লাল করে দেওয়া হলো */
         
         .now-playing { margin-top: 15px; font-size: 1.1rem; font-weight: 600; color: #a0a0b0; display: flex; justify-content: space-between; align-items: center; background: #1a1a24; padding: 15px 20px; border-radius: 10px;}
         .now-playing span { color: #fff; display: block; margin-top: 5px;}
@@ -58,10 +56,6 @@
         .delete-btn { background: #ff2a5f; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-top: 10px; font-size: 0.8rem; width: 100%; }
         .delete-btn:hover { background: #d11f4a; }
 
-        /* --- মোবাইলে ফুলস্ক্রিন ফিক্স --- */
-        .video-js.vjs-fullscreen { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 999999 !important; }
-        body.vjs-full-window { overflow: hidden !important; }
-
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; }
         .admin-panel { background: #1a1a24; padding: 30px; border-radius: 12px; border: 1px dashed #ff2a5f; width: 90%; max-width: 500px; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.8); max-height: 90vh; overflow-y: auto;}
         .close-modal { position: absolute; top: 15px; right: 20px; color: #888; font-size: 28px; font-weight: bold; cursor: pointer; transition: 0.3s; }
@@ -79,8 +73,8 @@
 <body>
 
     <header>
-        <h1>Live MR Sports IPTV</h1>
-        <button id="auth-btn" class="auth-btn" onclick="toggleAuth()">Sign in</button>
+        <h1>Live Sports IPTV</h1>
+        <button id="auth-btn" class="auth-btn" onclick="toggleAuth()">Admin Sign In</button>
     </header>
 
     <div class="container">
@@ -95,9 +89,7 @@
             
             <div class="video-area hidden" id="video-section">
                 <div class="video-wrapper">
-                    <video id="my-video" class="video-js vjs-default-skin vjs-big-play-centered vjs-fluid" controls preload="auto" playsinline data-setup="{}" crossorigin="anonymous">
-                        <source src="" type="application/x-mpegURL">
-                    </video>
+                    <video id="my-video" controls playsinline crossorigin="anonymous"></video>
                 </div>
                 <div class="now-playing">
                     <div>Now Playing: <span id="current-channel-name" style="color: #ff2a5f; font-size: 1.2rem;">Select a Channel</span></div>
@@ -152,14 +144,16 @@
 
     </div>
 
-    <script src="https://vjs.zencdn.net/8.3.0/video.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+    <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
+
     <script>
         // ==========================================
         // আপনার রেন্ডারের লাইভ API লিংকটি দিন 
         // ==========================================
         const API_BASE_URL = 'https://sports-iptv-backend.onrender.com';
 
-        const player = videojs('my-video');
+        const videoElement = document.getElementById('my-video');
         const channelGrid = document.getElementById('channels');
         const adminActions = document.getElementById('admin-actions');
         const authBtn = document.getElementById('auth-btn');
@@ -167,40 +161,81 @@
         const mainLayout = document.querySelector('.main-layout');
         let allChannelsData = [];
         let uniqueCategories = [];
-
         let isAdmin = localStorage.getItem('isAdmin') === 'true';
 
-        // --- আপডেট: মোবাইলে ফুলস্ক্রিন অটো-রোটেট (Landscape) ---
-        player.on('fullscreenchange', async function() {
-            if (player.isFullscreen()) {
-                try {
-                    if (screen.orientation && screen.orientation.lock) {
-                        await screen.orientation.lock('landscape');
-                    } else if (screen.lockOrientation) {
-                        screen.lockOrientation('landscape');
-                    } else if (screen.mozLockOrientation) {
-                        screen.mozLockOrientation('landscape');
-                    } else if (screen.msLockOrientation) {
-                        screen.msLockOrientation('landscape');
-                    }
-                } catch (error) {
-                    console.log('Browser blocked auto-rotate:', error);
-                }
-            } else {
-                try {
-                    if (screen.orientation && screen.orientation.unlock) {
-                        screen.orientation.unlock();
-                    } else if (screen.unlockOrientation) {
-                        screen.unlockOrientation();
-                    }
-                } catch (error) {}
-            }
+        // Plyr প্লেয়ার ইনিশিয়ালাইজেশন
+        const player = new Plyr(videoElement, {
+            controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'captions', 'settings', 'pip', 'airplay', 'fullscreen'],
+            settings: ['quality', 'speed'],
+            autoplay: true
         });
+        
+        let hls; // Hls.js ভ্যারিয়েবল
+
+        // প্লেয়ার অটো-রোটেট ফিক্স
+        player.on('enterfullscreen', async event => {
+            try {
+                if (screen.orientation && screen.orientation.lock) {
+                    await screen.orientation.lock('landscape');
+                } else if (screen.lockOrientation) {
+                    screen.lockOrientation('landscape');
+                }
+            } catch (error) { console.log('Browser blocked auto-rotate'); }
+        });
+
+        player.on('exitfullscreen', event => {
+            try {
+                if (screen.orientation && screen.orientation.unlock) {
+                    screen.orientation.unlock();
+                } else if (screen.unlockOrientation) {
+                    screen.unlockOrientation();
+                }
+            } catch (error) {}
+        });
+
+        // ভিডিও প্লে করার জন্য অত্যাধুনিক Hls.js ফাংশন
+        function playChannel(url, name) {
+            videoSection.classList.remove('hidden');
+            mainLayout.classList.add('video-playing'); 
+            document.getElementById('current-channel-name').innerText = name;
+
+            if (Hls.isSupported()) {
+                if (hls) {
+                    hls.destroy(); // আগের ভিডিও পুরোপুরি ক্লিয়ার করে দেবে
+                }
+                
+                // স্লো ইন্টারনেটের জন্য স্মার্ট বাফারিং কনফিগারেশন
+                hls = new Hls({
+                    maxBufferLength: 30, // খুব বেশি বাফার করে ইন্টারনেট খরচ করবে না
+                    maxMaxBufferLength: 60,
+                    liveSyncDurationCount: 3,
+                    enableWorker: true,
+                    lowLatencyMode: true // লাইভ টিভির জন্য লো-ল্যাটেন্সি
+                });
+                
+                hls.loadSource(url);
+                hls.attachMedia(videoElement);
+                hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                    player.play();
+                });
+            } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+                // আইফোন বা সাফারি ব্রাউজারের জন্য
+                videoElement.src = url;
+                videoElement.addEventListener('loadedmetadata', function () {
+                    player.play();
+                });
+            }
+
+            if (window.innerWidth <= 992) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
 
         function closePlayer() { 
             videoSection.classList.add('hidden'); 
-            mainLayout.classList.remove('video-playing'); // চ্যানেল লিস্ট আবার ১০০% হবে
+            mainLayout.classList.remove('video-playing'); 
             player.pause(); 
+            if(hls) { hls.destroy(); } // প্লেয়ার বন্ধ করলে ডেটা টানা বন্ধ হয়ে যাবে
         }
 
         function openModal(modalId) { 
@@ -273,19 +308,9 @@
                 card.className = 'channel-card';
                 card.innerHTML = `<h3>${channel.name}</h3><p>${channel.category}</p>`;
                 
+                // চ্যানেলে ক্লিক করলে নতুন playChannel ফাংশনটি কল হবে
                 card.onclick = () => {
-                    videoSection.classList.remove('hidden');
-                    
-                    // এই নতুন লাইনটি যোগ করা হলো (ভিডিও প্লে হলে চ্যানেল লিস্ট ২৫% হবে)
-                    mainLayout.classList.add('video-playing'); 
-                    
-                    player.src({ type: 'application/x-mpegURL', src: channel.url });
-                    player.play();
-                    document.getElementById('current-channel-name').innerText = channel.name;
-                    
-                    if (window.innerWidth <= 992) {
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }
+                    playChannel(channel.url, channel.name);
                 };
 
                 if(isAdmin) {
