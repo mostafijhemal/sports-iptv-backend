@@ -152,6 +152,8 @@
         // আপনার রেন্ডারের লাইভ API লিংকটি দিন 
         // ==========================================
         const API_BASE_URL = 'https://sports-iptv-backend.onrender.com';
+        // এখানে আপনার কপি করা গিটহাবের JSON লিংকটি বসিয়ে দিন
+        const AUTO_JSON_URL = 'https://raw.githubusercontent.com/abusaeeidx/CricHd-playlists-Auto-Update-permanent/refs/heads/main/api.json';
 
         const videoElement = document.getElementById('my-video');
         const channelGrid = document.getElementById('channels');
@@ -276,12 +278,43 @@
         }
 
         function loadChannels() {
+            // ১. প্রথমে আপনার ক্লাউড ডেটাবেস থেকে চ্যানেল আনবে
             fetch(`${API_BASE_URL}/api/channels`)
                 .then(res => res.json())
-                .then(data => {
-                    allChannelsData = data;
-                    generateCategoryFilters(); 
-                    displayChannels(allChannelsData);
+                .then(dbChannels => {
+
+                    // ২. এরপর গিটহাব থেকে অটো-আপডেট চ্যানেলগুলো আনবে (GET Request)
+                    if(AUTO_JSON_URL !== '' && AUTO_JSON_URL.includes('http')) {
+                        fetch(AUTO_JSON_URL)
+                            .then(res => res.json())
+                            .then(autoChannels => {
+                                // JSON ডেটাগুলোকে আমাদের ওয়েবসাইটের ফরম্যাটে সাজানো
+                                // (গিটহাবের ডেটায় প্রপার্টির নাম ভিন্ন হতে পারে, তাই কয়েকটি অপশন রাখা হলো)
+                                const formattedAutoChannels = autoChannels.map(ch => ({
+                                    id: 'auto-' + Math.random(), // অটো চ্যানেলের জন্য ডামি আইডি
+                                    name: ch.name || ch.title || ch.channel_name || 'Unknown Channel',
+                                    category: ch.category || ch.group_title || ch.group || 'Auto Updated',
+                                    url: ch.url || ch.link || ch.stream_url,
+                                    isAuto: true // এটি বোঝাবে যে এই চ্যানেলটি অটোমেটিক
+                                }));
+
+                                // ডেটাবেসের চ্যানেল এবং অটো চ্যানেল একসাথে মেশানো
+                                allChannelsData = [...dbChannels, ...formattedAutoChannels];
+                                generateCategoryFilters(); 
+                                displayChannels(allChannelsData);
+                            })
+                            .catch(err => {
+                                console.error("Failed to load auto channels:", err);
+                                // যদি গিটহাব থেকে ডেটা আনতে ফেইল করে, তবে শুধু ডেটাবেসের চ্যানেল দেখাবে
+                                allChannelsData = dbChannels;
+                                generateCategoryFilters(); 
+                                displayChannels(allChannelsData);
+                            });
+                    } else {
+                        allChannelsData = dbChannels;
+                        generateCategoryFilters(); 
+                        displayChannels(allChannelsData);
+                    }
                 });
         }
 
@@ -313,13 +346,26 @@
                     playChannel(channel.url, channel.name);
                 };
 
-                if(isAdmin) {
+                // ---- আপডেট হওয়া অংশ শুরু ----
+                if(isAdmin && !channel.isAuto) {
+                    // ডেটাবেসের চ্যানেলের জন্য ডিলিট বাটন
                     const delBtn = document.createElement('button');
                     delBtn.className = 'delete-btn';
                     delBtn.innerText = '🗑️ Delete';
                     delBtn.onclick = (e) => { e.stopPropagation(); deleteChannel(channel.id); };
                     card.appendChild(delBtn);
+                } else if (isAdmin && channel.isAuto) {
+                    // অটো-আপডেট চ্যানেলের জন্য একটি সুন্দর ব্যাজ (ডিলিট বাটন থাকবে না)
+                    const autoBadge = document.createElement('p');
+                    autoBadge.style.color = '#007bff';
+                    autoBadge.style.fontSize = '0.75rem';
+                    autoBadge.style.marginTop = '10px';
+                    autoBadge.style.fontWeight = 'bold';
+                    autoBadge.innerText = '⚡ Auto Updated';
+                    card.appendChild(autoBadge);
                 }
+                // ---- আপডেট হওয়া অংশ শেষ ----
+
                 channelGrid.appendChild(card);
             });
         }
