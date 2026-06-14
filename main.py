@@ -20,6 +20,11 @@ class ChannelCreate(BaseModel):
     category: str
     url: str
 
+class ChannelUpdate(BaseModel):
+    name: str
+    category: str
+    url: str
+
 class LoginData(BaseModel):
     password: str
 
@@ -84,6 +89,16 @@ def delete_channel(channel_id: int):
     conn.commit()
     conn.close()
     return {"message": "Channel deleted successfully!"}
+
+@app.put("/api/channels/{channel_id}")
+def update_channel(channel_id: int, channel: ChannelUpdate):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE channels SET name = %s, category = %s, url = %s WHERE id = %s', 
+                   (channel.name, channel.category, channel.url, channel_id))
+    conn.commit()
+    conn.close()
+    return {"message": "Channel updated successfully!"}
 
 @app.delete("/api/channels/all/delete")
 def delete_all_channels():

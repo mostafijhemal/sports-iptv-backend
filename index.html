@@ -126,6 +126,20 @@
             </div>
         </div>
 
+        <div id="edit-modal" class="modal-overlay hidden">
+            <div class="admin-panel">
+                <span class="close-modal" onclick="closeModal('edit-modal')">&times;</span>
+                <h2>✏️ Edit Channel</h2>
+                <form id="edit-channel-form">
+                    <input type="hidden" id="edit-channel-id"> 
+                    <div class="form-group"><input type="text" id="edit-channel-name" placeholder="Channel Name" required></div>
+                    <div class="form-group"><input type="text" id="edit-channel-category" placeholder="Category" required></div>
+                    <div class="form-group"><input type="url" id="edit-channel-url" placeholder="M3U8 Streaming URL" required></div>
+                    <button type="submit" class="submit-btn" style="background: #28a745;">Update Channel</button>
+                </form>
+            </div>
+        </div>
+
         <div id="category-modal" class="modal-overlay hidden">
             <div class="admin-panel">
                 <span class="close-modal" onclick="closeModal('category-modal')">&times;</span>
@@ -389,14 +403,34 @@
 
                 // ---- আপডেট হওয়া অংশ শুরু ----
                 if(isAdmin && !channel.isAuto) {
-                    // ডেটাবেসের চ্যানেলের জন্য ডিলিট বাটন
+                    // বাটনগুলোকে পাশাপাশি রাখার জন্য একটি Div
+                    const actionDiv = document.createElement('div');
+                    actionDiv.style.display = 'flex';
+                    actionDiv.style.gap = '5px';
+                    actionDiv.style.marginTop = '10px';
+
+                    // Edit বাটন
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'delete-btn';
+                    editBtn.style.background = '#007bff'; // নীল রঙ
+                    editBtn.innerText = '✏️ Edit';
+                    editBtn.onclick = (e) => { 
+                        e.stopPropagation(); 
+                        openEditModal(channel.id, channel.name, channel.category, channel.url); 
+                    };
+                    
+                    // Delete বাটন
                     const delBtn = document.createElement('button');
                     delBtn.className = 'delete-btn';
                     delBtn.innerText = '🗑️ Delete';
                     delBtn.onclick = (e) => { e.stopPropagation(); deleteChannel(channel.id); };
-                    card.appendChild(delBtn);
+
+                    actionDiv.appendChild(editBtn);
+                    actionDiv.appendChild(delBtn);
+                    card.appendChild(actionDiv);
+                    
                 } else if (isAdmin && channel.isAuto) {
-                    // অটো-আপডেট চ্যানেলের জন্য একটি সুন্দর ব্যাজ (ডিলিট বাটন থাকবে না)
+                    // অটো-আপডেট চ্যানেলের জন্য ব্যাজ
                     const autoBadge = document.createElement('p');
                     autoBadge.style.color = '#007bff';
                     autoBadge.style.fontSize = '0.75rem';
@@ -488,6 +522,45 @@
             })
             .finally(() => { btn.innerText = originalText; btn.disabled = false; }); // কাজ শেষে আবার আগের মতো হবে
         }
+
+        // এডিট মোডাল ওপেন করা এবং ডেটা বসানো
+        function openEditModal(id, name, category, url) {
+            document.getElementById('edit-channel-id').value = id;
+            document.getElementById('edit-channel-name').value = name;
+            document.getElementById('edit-channel-category').value = category;
+            document.getElementById('edit-channel-url').value = url;
+            openModal('edit-modal');
+        }
+
+        // এডিট করা ডেটা সার্ভারে সেভ করা
+        document.getElementById('edit-channel-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const submitBtn = this.querySelector('.submit-btn');
+            const originalText = submitBtn.innerText;
+            submitBtn.innerText = "⏳ Updating...";
+            submitBtn.disabled = true;
+
+            const id = document.getElementById('edit-channel-id').value;
+            const updatedData = { 
+                name: document.getElementById('edit-channel-name').value, 
+                category: document.getElementById('edit-channel-category').value, 
+                url: document.getElementById('edit-channel-url').value 
+            };
+
+            fetch(`${API_BASE_URL}/api/channels/${id}`, { 
+                method: 'PUT', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(updatedData) 
+            })
+            .then(res => res.json())
+            .then(data => { 
+                alert(data.message || "Updated successfully!");
+                closeModal('edit-modal'); 
+                loadChannels(); 
+            })
+            .catch(err => alert("Error: " + err.message))
+            .finally(() => { submitBtn.innerText = originalText; submitBtn.disabled = false; });
+        });
 
         updateUI(); loadChannels();
     </script>
