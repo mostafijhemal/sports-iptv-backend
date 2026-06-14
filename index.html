@@ -73,8 +73,7 @@
 <body>
 
     <header>
-        <h1>Live Sports IPTV</h1>
-        <button id="auth-btn" class="auth-btn" onclick="toggleAuth()">Admin Sign In</button>
+        <h1 onclick="secretAdminLogin()" style="cursor: pointer; user-select: none;" title="Live Sports">Live Sports IPTV</h1>
     </header>
 
     <div class="container">
@@ -83,6 +82,7 @@
             <button onclick="openModal('add-modal')" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 25px; font-weight: 800; cursor: pointer;">+ Add Channels</button>
             <button onclick="openModal('category-modal')" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 25px; font-weight: 800; cursor: pointer;">📂 Manage Categories</button>
             <button onclick="deleteAllChannels()" style="background: #ff2a5f; color: white; border: none; padding: 10px 20px; border-radius: 25px; font-weight: 800; cursor: pointer;">🗑️ Delete All</button>
+            <button onclick="toggleAuth()" style="background: #333; color: white; border: none; padding: 10px 20px; border-radius: 25px; font-weight: 800; cursor: pointer;">🚪 Sign Out</button>
         </div>
 
         <div class="main-layout">
@@ -100,6 +100,9 @@
             <div class="channels-area">
                 <div class="filters" id="dynamic-filters">
                     <button class="filter-btn active" onclick="filterChannels('All', this)">All</button>
+                </div>
+                <div id="loading-spinner" style="text-align: center; padding: 30px; font-size: 1.2rem; color: #ff2a5f; display: none; font-weight: 600;">
+                    ⏳ Loading Channels... Please Wait.
                 </div>
                 <div class="channel-grid" id="channels"></div>
             </div>
@@ -252,18 +255,30 @@
             }
         }
 
+        // --- সিক্রেট লগইন লজিক ---
+        let clickCount = 0;
+        let clickTimer;
+        function secretAdminLogin() {
+            clickCount++;
+            clearTimeout(clickTimer);
+            clickTimer = setTimeout(() => { clickCount = 0; }, 1500); // ১.৫ সেকেন্ডের মধ্যে ৩ বার ক্লিক করতে হবে
+            if(clickCount >= 3) {
+                toggleAuth();
+                clickCount = 0;
+            }
+        }
+
         function toggleAuth() {
             if (isAdmin) {
                 localStorage.setItem('isAdmin', 'false'); isAdmin = false;
                 alert("Logged out successfully!"); updateUI();
             } else {
-                const password = prompt("Enter Admin Password:");
+                const password = prompt("Enter Secret Admin Password:");
                 if(password) {
                     fetch(`${API_BASE_URL}/api/login`, {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ password: password })
-                    })
-                    .then(res => {
+                    }).then(res => {
                         if(res.ok) { localStorage.setItem('isAdmin', 'true'); isAdmin = true; alert("Login successful!"); updateUI(); } 
                         else { alert("Incorrect Password!"); }
                     });
@@ -272,49 +287,48 @@
         }
 
         function updateUI() {
-            if (isAdmin) { authBtn.innerText = "Sign Out"; adminActions.classList.remove('hidden'); } 
-            else { authBtn.innerText = "Admin Sign In"; adminActions.classList.add('hidden'); closeModal('add-modal'); closeModal('category-modal'); }
+            // আগের authBtn সংক্রান্ত কোড মুছে দেওয়া হয়েছে
+            if (isAdmin) { adminActions.classList.remove('hidden'); } 
+            else { adminActions.classList.add('hidden'); closeModal('add-modal'); closeModal('category-modal'); }
             displayChannels(allChannelsData);
         }
 
         function loadChannels() {
-            // ১. প্রথমে আপনার ক্লাউড ডেটাবেস থেকে চ্যানেল আনবে
+            document.getElementById('loading-spinner').style.display = 'block'; // লোডিং শুরু
+            document.getElementById('channels').innerHTML = ''; // আগের চ্যানেল হাইড
+
             fetch(`${API_BASE_URL}/api/channels`)
                 .then(res => res.json())
                 .then(dbChannels => {
-
-                    // ২. এরপর গিটহাব থেকে অটো-আপডেট চ্যানেলগুলো আনবে (GET Request)
                     if(AUTO_JSON_URL !== '' && AUTO_JSON_URL.includes('http')) {
                         fetch(AUTO_JSON_URL)
                             .then(res => res.json())
                             .then(autoChannels => {
-                                // JSON ডেটাগুলোকে আমাদের ওয়েবসাইটের ফরম্যাটে সাজানো
-                                // (গিটহাবের ডেটায় প্রপার্টির নাম ভিন্ন হতে পারে, তাই কয়েকটি অপশন রাখা হলো)
                                 const formattedAutoChannels = autoChannels.map(ch => ({
-                                    id: 'auto-' + Math.random(), // অটো চ্যানেলের জন্য ডামি আইডি
+                                    id: 'auto-' + Math.random(),
                                     name: ch.name || ch.title || ch.channel_name || 'Unknown Channel',
                                     category: ch.category || ch.group_title || ch.group || 'Auto Updated',
                                     url: ch.url || ch.link || ch.stream_url,
-                                    isAuto: true // এটি বোঝাবে যে এই চ্যানেলটি অটোমেটিক
+                                    isAuto: true
                                 }));
-
-                                // ডেটাবেসের চ্যানেল এবং অটো চ্যানেল একসাথে মেশানো
                                 allChannelsData = [...dbChannels, ...formattedAutoChannels];
+                                document.getElementById('loading-spinner').style.display = 'none'; // লোডিং শেষ
                                 generateCategoryFilters(); 
                                 displayChannels(allChannelsData);
                             })
                             .catch(err => {
-                                console.error("Failed to load auto channels:", err);
-                                // যদি গিটহাব থেকে ডেটা আনতে ফেইল করে, তবে শুধু ডেটাবেসের চ্যানেল দেখাবে
                                 allChannelsData = dbChannels;
-                                generateCategoryFilters(); 
-                                displayChannels(allChannelsData);
+                                document.getElementById('loading-spinner').style.display = 'none';
+                                generateCategoryFilters(); displayChannels(allChannelsData);
                             });
                     } else {
                         allChannelsData = dbChannels;
-                        generateCategoryFilters(); 
-                        displayChannels(allChannelsData);
+                        document.getElementById('loading-spinner').style.display = 'none';
+                        generateCategoryFilters(); displayChannels(allChannelsData);
                     }
+                })
+                .catch(err => {
+                    document.getElementById('loading-spinner').innerText = '❌ Error connecting to database.';
                 });
         }
 
@@ -418,9 +432,15 @@
 
         document.getElementById('add-channel-form').addEventListener('submit', function(e) {
             e.preventDefault();
+            const submitBtn = this.querySelector('.submit-btn');
+            const originalText = submitBtn.innerText;
+            submitBtn.innerText = "⏳ Saving..."; // বাটনে লোডিং দেখাবে
+            submitBtn.disabled = true;
+
             const newChannel = { name: document.getElementById('channel-name').value, category: document.getElementById('channel-category').value, url: document.getElementById('channel-url').value };
             fetch(`${API_BASE_URL}/api/channels`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newChannel) })
-            .then(() => { document.getElementById('add-channel-form').reset(); closeModal('add-modal'); loadChannels(); });
+            .then(() => { document.getElementById('add-channel-form').reset(); closeModal('add-modal'); loadChannels(); })
+            .finally(() => { submitBtn.innerText = originalText; submitBtn.disabled = false; }); // কাজ শেষে আবার আগের মতো হবে
         });
 
         function uploadM3UFile() {
@@ -428,12 +448,18 @@
             const file = fileInput.files[0];
             if (!file) return alert("Please select an M3U file first.");
             
+            const btn = document.querySelector('button[onclick="uploadM3UFile()"]');
+            const originalText = btn.innerText;
+            btn.innerText = "⏳ Uploading & Extracting..."; // বাটনে লোডিং দেখাবে
+            btn.disabled = true;
+
             const formData = new FormData(); formData.append("file", file);
             fetch(`${API_BASE_URL}/api/upload-m3u`, { method: 'POST', body: formData })
             .then(res => res.json()).then(data => { 
                 if(data.message) { alert(data.message); } else { alert(data.detail); }
                 fileInput.value = ""; closeModal('add-modal'); loadChannels(); 
-            });
+            })
+            .finally(() => { btn.innerText = originalText; btn.disabled = false; }); // কাজ শেষে আবার আগের মতো হবে
         }
 
         updateUI(); loadChannels();
