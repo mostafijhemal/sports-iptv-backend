@@ -68,6 +68,46 @@
         .hidden { display: none !important; }
 
         @media (max-width: 768px) { header { flex-direction: column; gap: 10px; } .now-playing { flex-direction: column; gap: 10px; text-align: center; } }
+
+        /* ==========================================
+           Loading Animation Styles
+           ========================================== */
+        .loader-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+        
+        .spinner {
+            width: 45px;
+            height: 45px;
+            border: 5px solid #2a2a35;
+            border-top: 5px solid #ff2a5f;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+
+        .loading-text {
+            color: #ff2a6a;
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
     </style>
 </head>
 <body>
@@ -101,8 +141,11 @@
                 <div class="filters" id="dynamic-filters">
                     <button class="filter-btn active" onclick="filterChannels('All', this)">All</button>
                 </div>
-                <div id="loading-spinner" style="text-align: center; padding: 30px; font-size: 1.2rem; color: #ff2a5f; display: none; font-weight: 600;">
-                    ⏳ Loading Channels... Please Wait.
+                <div id="loading-spinner" style="display: none;">
+                    <div class="loader-container">
+                        <div class="spinner"></div>
+                        <div class="loading-text">Loading Channels... Please Wait</div>
+                    </div>
                 </div>
                 <div class="channel-grid" id="channels"></div>
             </div>
