@@ -255,6 +255,33 @@
             }
         }
 
+        // ==========================================
+        // Basic Security: Disable Right Click & DevTools
+        // ==========================================
+        
+        // রাইট বাটন ক্লিক বন্ধ করা
+        document.addEventListener('contextmenu', event => event.preventDefault());
+
+        // কীবোর্ড শর্টকাট (F12, Ctrl+U, Ctrl+Shift+I) বন্ধ করা
+        document.onkeydown = function(e) {
+            // Disable F12
+            if(e.keyCode == 123) {
+                return false;
+            }
+            // Disable Ctrl+Shift+I (Inspect Element)
+            if(e.ctrlKey && e.shiftKey && e.keyCode == 73) {
+                return false;
+            }
+            // Disable Ctrl+Shift+J (Console)
+            if(e.ctrlKey && e.shiftKey && e.keyCode == 74) {
+                return false;
+            }
+            // Disable Ctrl+U (View Page Source)
+            if(e.ctrlKey && e.keyCode == 85) {
+                return false;
+            }
+        };
+
         // --- সিক্রেট লগইন লজিক ---
         let clickCount = 0;
         let clickTimer;
