@@ -261,28 +261,30 @@
             mainLayout.classList.add('video-playing'); 
             document.getElementById('current-channel-name').innerText = name;
 
+            // --- আসল ম্যাজিক: সাধারণ লিংকটিকে ব্যাকএন্ড প্রক্সি লিংকে রূপান্তর করা ---
+            const proxiedUrl = `${API_BASE_URL}/api/proxy?url=${encodeURIComponent(url)}`;
+
             if (Hls.isSupported()) {
                 if (hls) {
-                    hls.destroy(); // আগের ভিডিও পুরোপুরি ক্লিয়ার করে দেবে
+                    hls.destroy(); // আগের ভিডিও সেশন ক্লিয়ার
                 }
                 
-                // স্লো ইন্টারনেটের জন্য স্মার্ট বাফারিং কনফিগারেশন
                 hls = new Hls({
-                    maxBufferLength: 30, // খুব বেশি বাফার করে ইন্টারনেট খরচ করবে না
+                    maxBufferLength: 30,
                     maxMaxBufferLength: 60,
                     liveSyncDurationCount: 3,
                     enableWorker: true,
-                    lowLatencyMode: true // লাইভ টিভির জন্য লো-ল্যাটেন্সি
+                    lowLatencyMode: true
                 });
                 
-                hls.loadSource(url);
+                hls.loadSource(proxiedUrl); // প্রক্সি লিংকটি লোড হবে
                 hls.attachMedia(videoElement);
                 hls.on(Hls.Events.MANIFEST_PARSED, function () {
                     player.play();
                 });
             } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
-                // আইফোন বা সাফারি ব্রাউজারের জন্য
-                videoElement.src = url;
+                // আইফোন বা সাফারির জন্য প্রক্সি লিংক সরাসরি বসানো
+                videoElement.src = proxiedUrl;
                 videoElement.addEventListener('loadedmetadata', function () {
                     player.play();
                 });
