@@ -32,6 +32,10 @@ class ChannelUpdate(BaseModel):
 class BulkDelete(BaseModel):
     ids: List[int]
 
+class BulkCategoryUpdate(BaseModel):
+    ids: List[int]
+    new_category: str
+
 class LoginData(BaseModel):
     password: str
 
@@ -175,6 +179,21 @@ def bulk_delete_channels(data: BulkDelete):
     conn.commit()
     conn.close()
     return {"message": f"{len(data.ids)} channels deleted successfully!"}
+
+@app.put("/api/channels/bulk-category")
+def bulk_update_category(data: BulkCategoryUpdate):
+    if not data.ids:
+        return {"message": "No channels selected"}
+    if not data.new_category.strip():
+        return {"message": "Category name cannot be empty"}
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    # ANY(%s) ব্যবহার করে একসাথে সিলেক্ট করা চ্যানেলগুলোর ক্যাটাগরি আপডেট করা হচ্ছে
+    cursor.execute('UPDATE channels SET category = %s WHERE id = ANY(%s)', (data.new_category, data.ids))
+    conn.commit()
+    conn.close()
+    return {"message": f"{len(data.ids)} channels successfully moved to '{data.new_category}'!"}
 
 @app.put("/api/categories")
 def rename_category(data: CategoryRename):
