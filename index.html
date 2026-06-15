@@ -122,6 +122,7 @@
             <button onclick="openModal('add-modal')" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 25px; font-weight: 800; cursor: pointer;">+ Add Channels</button>
             <button onclick="openModal('category-modal')" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 25px; font-weight: 800; cursor: pointer;">📂 Manage Categories</button>
             <button onclick="deleteAllChannels()" style="background: #ff2a5f; color: white; border: none; padding: 10px 20px; border-radius: 25px; font-weight: 800; cursor: pointer;">🗑️ Delete All</button>
+            <button id="bulk-delete-btn" onclick="bulkDelete()" style="background: #ff8c00; color: white; border: none; padding: 10px 20px; border-radius: 25px; font-weight: 800; cursor: pointer; display: none;">🗑️ Delete Selected (0)</button>
             <button onclick="toggleAuth()" style="background: #333; color: white; border: none; padding: 10px 20px; border-radius: 25px; font-weight: 800; cursor: pointer;">🚪 Sign Out</button>
         </div>
 
@@ -222,6 +223,7 @@
         const videoSection = document.getElementById('video-section');
         const mainLayout = document.querySelector('.main-layout');
         let allChannelsData = [];
+        let selectedChannels = new Set(); // সিলেক্ট করা চ্যানেলের আইডি ধরে রাখার জন্য
         let uniqueCategories = [];
         let isAdmin = localStorage.getItem('isAdmin') === 'true';
 
@@ -448,6 +450,25 @@
 
                 // ---- আপডেট হওয়া অংশ শুরু ----
                 if(isAdmin && !channel.isAuto) {
+                    card.style.position = 'relative'; // চেকবক্স ঠিক জায়গায় বসানোর জন্য
+                    
+                    // --- নতুন: চেকবক্স যুক্ত করা ---
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.className = 'channel-checkbox';
+                    checkbox.style.position = 'absolute';
+                    checkbox.style.top = '10px';
+                    checkbox.style.left = '10px';
+                    checkbox.style.transform = 'scale(1.5)';
+                    checkbox.style.cursor = 'pointer';
+                    checkbox.onclick = (e) => {
+                        e.stopPropagation(); // ভিডিও প্লে হওয়া ঠেকাবে
+                        toggleSelection(channel.id, checkbox.checked);
+                    };
+                    // পেজ রিলোড হলেও সিলেকশন ধরে রাখবে
+                    if(selectedChannels.has(channel.id)) checkbox.checked = true;
+                    card.appendChild(checkbox);
+                    // -----------------------------
                     // বাটনগুলোকে পাশাপাশি রাখার জন্য একটি Div
                     const actionDiv = document.createElement('div');
                     actionDiv.style.display = 'flex';
@@ -606,6 +627,58 @@
             .catch(err => alert("Error: " + err.message))
             .finally(() => { submitBtn.innerText = originalText; submitBtn.disabled = false; });
         });
+
+        // চেকবক্স টিক দিলে বা তুলে নিলে কী হবে
+        function toggleSelection(id, isChecked) {
+            if(isChecked) {
+                selectedChannels.add(id);
+            } else {
+                selectedChannels.delete(id);
+            }
+            updateBulkDeleteBtn();
+        }
+
+        // বাটন আপডেট করার লজিক
+        function updateBulkDeleteBtn() {
+            const btn = document.getElementById('bulk-delete-btn');
+            if(selectedChannels.size > 0) {
+                btn.style.display = 'inline-block';
+                btn.innerText = `🗑️ Delete Selected (${selectedChannels.size})`;
+            } else {
+                btn.style.display = 'none';
+            }
+        }
+
+        // একসাথে ডিলিট করার ফাংশন
+        function bulkDelete() {
+            if(confirm(`Are you sure you want to delete ${selectedChannels.size} channels?`)) {
+                const btn = document.getElementById('bulk-delete-btn');
+                const originalText = btn.innerText;
+                btn.innerText = "⏳ Deleting...";
+                btn.disabled = true;
+
+                fetch(`${API_BASE_URL}/api/channels/bulk-delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids: Array.from(selectedChannels) })
+                })
+                .then(res => {
+                    if (!res.ok) throw new Error("Server is sleeping or error occurred!");
+                    return res.json();
+                })
+                .then(data => {
+                    alert(data.message);
+                    selectedChannels.clear(); // ডিলিট হওয়ার পর সিলেকশন ক্লিয়ার
+                    updateBulkDeleteBtn();
+                    loadChannels();
+                })
+                .catch(err => alert("Error: " + err.message))
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                });
+            }
+        }
 
         updateUI(); loadChannels();
     </script>

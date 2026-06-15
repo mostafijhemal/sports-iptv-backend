@@ -7,6 +7,7 @@ from psycopg2.extras import RealDictCursor
 import re
 import requests
 from urllib.parse import urlparse
+from typing import List
 
 app = FastAPI()
 
@@ -27,6 +28,9 @@ class ChannelUpdate(BaseModel):
     name: str
     category: str
     url: str
+
+class BulkDelete(BaseModel):
+    ids: List[int]
 
 class LoginData(BaseModel):
     password: str
@@ -158,6 +162,19 @@ def delete_all_channels():
     conn.commit()
     conn.close()
     return {"message": "All channels deleted successfully!"}
+
+@app.post("/api/channels/bulk-delete")
+def bulk_delete_channels(data: BulkDelete):
+    if not data.ids:
+        return {"message": "No channels selected"}
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    # ANY(%s) ব্যবহার করে একসাথে অনেকগুলো আইডি ডিলিট করা হচ্ছে
+    cursor.execute('DELETE FROM channels WHERE id = ANY(%s)', (data.ids,))
+    conn.commit()
+    conn.close()
+    return {"message": f"{len(data.ids)} channels deleted successfully!"}
 
 @app.put("/api/categories")
 def rename_category(data: CategoryRename):
