@@ -699,7 +699,7 @@
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        ids: Array.from(selectedChannels), 
+                        ids: Array.from(selectedChannels).map(Number), // <-- এই .map(Number) নিশ্চিত করবে যে আইডিগুলো নম্বর হিসেবে যাচ্ছে
                         new_category: newCategory.trim() 
                     })
                 })
