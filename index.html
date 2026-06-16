@@ -277,12 +277,26 @@
             mainLayout.classList.add('video-playing'); 
             document.getElementById('current-channel-name').innerText = name;
 
-            // --- আসল ম্যাজিক: সাধারণ লিংকটিকে ব্যাকএন্ড প্রক্সি লিংকে রূপান্তর করা ---
-            const proxiedUrl = `${API_BASE_URL}/api/proxy?url=${encodeURIComponent(url)}`;
+            // --- স্মার্ট প্রক্সি লজিক ---
+            // যেসব বাংলাদেশি সার্ভার আমেরিকান প্রক্সি ব্লক করে, তাদের তালিকা
+            const localBDDomains = ['gpcdn.net', 'ncare.live', 'ekusheyserver.com', 'alvetv.com'];
+            
+            let finalUrl = url; // ডিফল্টভাবে ডাইরেক্ট লিংক সেট করা
+            
+            // লিংকটি যদি ব্লকড লিস্টের বাইরের হয়, তবেই প্রক্সি ব্যবহার করবে
+            const shouldBypassProxy = localBDDomains.some(domain => url.includes(domain));
+            
+            if (!shouldBypassProxy) {
+                // বিদেশি বা সাধারণ লিংক হলে প্রক্সির ভেতর দিয়ে যাবে
+                finalUrl = `${API_BASE_URL}/api/proxy?url=${encodeURIComponent(url)}`;
+            } else {
+                console.log("Local BD stream detected! Bypassing US Proxy...");
+            }
+            // ---------------------------
 
             if (Hls.isSupported()) {
                 if (hls) {
-                    hls.destroy(); // আগের ভিডিও সেশন ক্লিয়ার
+                    hls.destroy(); // আগের ভিডিও সেশন ক্লিয়ার
                 }
                 
                 hls = new Hls({
@@ -293,20 +307,25 @@
                     lowLatencyMode: true
                 });
                 
-                hls.loadSource(proxiedUrl); // প্রক্সি লিংকটি লোড হবে
+                hls.loadSource(finalUrl); // স্মার্ট লিংকটি লোড হবে
                 hls.attachMedia(videoElement);
                 hls.on(Hls.Events.MANIFEST_PARSED, function () {
                     player.play();
                 });
+                
+                // যদি কোনো কারণে প্লে হতে সমস্যা হয়, তবে কনসোলে এরর দেখাবে
+                hls.on(Hls.Events.ERROR, function (event, data) {
+                    if (data.fatal) {
+                        console.error("Video Playback Error:", data);
+                    }
+                });
             } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
-                // আইফোন বা সাফারির জন্য প্রক্সি লিংক সরাসরি বসানো
-                videoElement.src = proxiedUrl;
+                // আইফোন বা সাফারির জন্য
+                videoElement.src = finalUrl;
                 videoElement.addEventListener('loadedmetadata', function () {
                     player.play();
                 });
             }
-
-            
         }
 
         function closePlayer() { 
