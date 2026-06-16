@@ -685,9 +685,9 @@
             }
         }
 
-        // একসাথে ক্যাটাগরি পরিবর্তন করার ফাংশন
+        // একসাথে ক্যাটাগরি পরিবর্তন করার ফাংশন (উন্নত এরর চেকিংসহ)
         function bulkMove() {
-            const newCategory = prompt(`Enter the new category name for ${selectedChannels.size} selected channels:\n(If the category doesn't exist, it will be created automatically)`);
+            const newCategory = prompt(`Enter the new category name for ${selectedChannels.size} selected channels:`);
             
             if (newCategory !== null && newCategory.trim() !== "") {
                 const btn = document.getElementById('bulk-move-btn');
@@ -699,21 +699,28 @@
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        ids: Array.from(selectedChannels).map(Number), // <-- এই .map(Number) নিশ্চিত করবে যে আইডিগুলো নম্বর হিসেবে যাচ্ছে
+                        ids: Array.from(selectedChannels).map(Number), 
                         new_category: newCategory.trim() 
                     })
                 })
-                .then(res => {
-                    if (!res.ok) throw new Error("Server is sleeping or error occurred!");
+                .then(async res => {
+                    // সার্ভার কোনো এরর দিলে সেটি হাইড না করে সরাসরি বের করে আনা হবে
+                    if (!res.ok) {
+                        const errorText = await res.text();
+                        throw new Error(`Status: ${res.status} | Details: ${errorText}`);
+                    }
                     return res.json();
                 })
                 .then(data => {
                     alert(data.message);
-                    selectedChannels.clear(); // কাজ শেষ হলে সিলেকশন ক্লিয়ার
-                    updateBulkDeleteBtn(); // বাটন হাইড করা
-                    loadChannels(); // নতুন ক্যাটাগরিসহ চ্যানেল রিলোড
+                    selectedChannels.clear(); 
+                    updateBulkDeleteBtn(); 
+                    loadChannels(); 
                 })
-                .catch(err => alert("Error: " + err.message))
+                .catch(err => {
+                    // এখন অ্যালার্ট বক্সে আসল এররটি দেখাবে
+                    alert("System Error -> " + err.message);
+                })
                 .finally(() => {
                     btn.disabled = false;
                     btn.innerText = originalText;
