@@ -139,34 +139,6 @@ def add_channel(channel: ChannelCreate):
     conn.close()
     return {"message": "Channel added successfully!"}
 
-@app.put("/api/channels/{channel_id}")
-def update_channel(channel_id: int, channel: ChannelUpdate):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('UPDATE channels SET name = %s, category = %s, url = %s WHERE id = %s', 
-                   (channel.name, channel.category, channel.url, channel_id))
-    conn.commit()
-    conn.close()
-    return {"message": "Channel updated successfully!"}
-
-@app.delete("/api/channels/{channel_id}")
-def delete_channel(channel_id: int):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('DELETE FROM channels WHERE id = %s', (channel_id,))
-    conn.commit()
-    conn.close()
-    return {"message": "Channel deleted successfully!"}
-
-@app.delete("/api/channels/all/delete")
-def delete_all_channels():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('DELETE FROM channels')
-    conn.commit()
-    conn.close()
-    return {"message": "All channels deleted successfully!"}
-
 @app.post("/api/channels/bulk-delete")
 def bulk_delete_channels(data: BulkDelete):
     if not data.ids:
@@ -194,6 +166,34 @@ def bulk_update_category(data: BulkCategoryUpdate):
     conn.commit()
     conn.close()
     return {"message": f"{len(data.ids)} channels successfully moved to '{data.new_category}'!"}
+
+@app.put("/api/channels/{channel_id}")
+def update_channel(channel_id: int, channel: ChannelUpdate):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE channels SET name = %s, category = %s, url = %s WHERE id = %s', 
+                   (channel.name, channel.category, channel.url, channel_id))
+    conn.commit()
+    conn.close()
+    return {"message": "Channel updated successfully!"}
+
+@app.delete("/api/channels/{channel_id}")
+def delete_channel(channel_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM channels WHERE id = %s', (channel_id,))
+    conn.commit()
+    conn.close()
+    return {"message": "Channel deleted successfully!"}
+
+@app.delete("/api/channels/all/delete")
+def delete_all_channels():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM channels')
+    conn.commit()
+    conn.close()
+    return {"message": "All channels deleted successfully!"}
 
 @app.put("/api/categories")
 def rename_category(data: CategoryRename):
