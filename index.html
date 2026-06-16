@@ -13,6 +13,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { 
             max-width: 100%;
+            overflow-x: clip;
         }
         body { 
             background-color: #0f0f13; 
@@ -31,7 +32,17 @@
 
         .main-layout { display: flex; flex-direction: column; gap: 20px; transition: all 0.3s ease; }
 
-        .video-area { width: 100%; position: sticky; top: 0; z-index: 999; background: #0f0f13; padding-top: 10px; padding-bottom: 15px; }
+        .video-area { 
+            width: 100%; 
+            position: -webkit-sticky; /* <--- আইফোন ও সাফারির জন্য জাদুকরী লাইন */
+            position: sticky; 
+            top: 0; 
+            align-self: flex-start; /* <--- ফ্লেক্সবক্সে স্টিকি কাজ করানোর ট্রিক */
+            z-index: 9999; /* অন্যান্য সবকিছুর ওপরে রাখার জন্য একটু বাড়িয়ে দিলাম */
+            background: #0f0f13; 
+            padding-top: 10px; 
+            padding-bottom: 15px; 
+        }
         .channels-area { 
             width: 100%; 
             transition: width 0.4s ease; 
@@ -40,9 +51,9 @@
 
         @media (min-width: 992px) {
             .main-layout { flex-direction: row; align-items: flex-start; gap: 30px; }
-            .video-area { width: 75%; top: 20px; padding-top: 0; padding-bottom: 0; }
+            .video-area { width: calc(75% - 15px); top: 20px; padding-top: 0; padding-bottom: 0; }
             .channels-area { width: 100%; } 
-            .main-layout.video-playing .channels-area { width: 25%; }
+            .main-layout.video-playing .channels-area { width: calc(25% - 15px); }
         }
 
         /* Plyr প্লেয়ারের কাস্টম ডিজাইন */
