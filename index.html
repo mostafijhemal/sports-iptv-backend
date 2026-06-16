@@ -400,33 +400,40 @@
             fetch(`${API_BASE_URL}/api/settings/auto-json`)
                 .then(res => res.json())
                 .then(settingData => {
-                    AUTO_JSON_URL = settingData.url || ''; 
+                    AUTO_JSON_URL = (settingData.url || '').trim(); // লিংক থেকে স্পেস ক্লিন করা হলো
                     return fetch(`${API_BASE_URL}/api/channels`);
                 })
                 .then(res => res.json())
                 .then(dbChannels => {
                     if(AUTO_JSON_URL !== '' && AUTO_JSON_URL.includes('http')) {
-                        // প্রথমে লিংকটি টেক্সট হিসেবে আনা হচ্ছে
                         fetch(AUTO_JSON_URL)
                             .then(res => res.text()) 
                             .then(textData => {
                                 let formattedAutoChannels = [];
 
-                                // যদি লিংকটি M3U ফরম্যাটের হয়
-                                if(textData.includes('#EXTM3U') || AUTO_JSON_URL.endsWith('.m3u')) {
-                                    const lines = textData.split('\n');
+                                // M3U চেকিং আরও স্ট্রং করা হলো
+                                if(textData.includes('#EXTM3U') || AUTO_JSON_URL.toLowerCase().includes('.m3u')) {
+                                    // \r\n এবং \n উভয় ধরনের লাইন ব্রেক সাপোর্ট করবে
+                                    const lines = textData.split(/\r?\n/); 
                                     let currentName = 'Unknown Channel';
                                     let currentCategory = 'Auto M3U';
 
                                     for(let line of lines) {
                                         line = line.trim();
                                         if(line.startsWith('#EXTINF')) {
-                                            const nameMatch = line.match(/,(.*)$/);
-                                            if(nameMatch) currentName = nameMatch[1].trim();
+                                            // নাম বের করার নিখুঁত লজিক
+                                            const nameParts = line.split(',');
+                                            if(nameParts.length > 1) {
+                                                currentName = nameParts.slice(1).join(',').trim();
+                                            }
                                             
+                                            // ক্যাটাগরি বের করা
                                             const catMatch = line.match(/(?:group-title|tvg-group)="([^"]+)"/i);
-                                            if(catMatch) currentCategory = catMatch[1].trim();
-                                            else currentCategory = 'Auto M3U';
+                                            if(catMatch) {
+                                                currentCategory = catMatch[1].trim();
+                                            } else {
+                                                currentCategory = 'Auto M3U'; 
+                                            }
                                         } 
                                         else if (line.startsWith('http')) {
                                             formattedAutoChannels.push({
@@ -436,20 +443,24 @@
                                                 url: line,
                                                 isAuto: true
                                             });
-                                            currentName = 'Unknown Channel'; // রিসেট
+                                            currentName = 'Unknown Channel'; 
                                         }
                                     }
                                 } 
-                                // যদি লিংকটি JSON ফরম্যাটের হয়
                                 else {
-                                    const jsonData = JSON.parse(textData);
-                                    formattedAutoChannels = jsonData.map(ch => ({
-                                        id: 'auto-' + Math.random(),
-                                        name: ch.name || ch.title || ch.channel_name || 'Unknown Channel',
-                                        category: ch.category || ch.group_title || ch.group || 'Auto JSON',
-                                        url: ch.url || ch.link || ch.stream_url,
-                                        isAuto: true
-                                    }));
+                                    try {
+                                        const jsonData = JSON.parse(textData);
+                                        formattedAutoChannels = jsonData.map(ch => ({
+                                            id: 'auto-' + Math.random(),
+                                            name: ch.name || ch.title || ch.channel_name || 'Unknown Channel',
+                                            category: ch.category || ch.group_title || ch.group || 'Auto JSON',
+                                            url: ch.url || ch.link || ch.stream_url,
+                                            isAuto: true
+                                        }));
+                                    } catch (e) {
+                                        console.error("JSON Parsing Error: ", e);
+                                        alert("The link provided is not a valid JSON or M3U file!");
+                                    }
                                 }
 
                                 allChannelsData = [...dbChannels, ...formattedAutoChannels];
@@ -459,6 +470,7 @@
                             })
                             .catch(err => {
                                 console.error("Auto Fetch Error:", err);
+                                alert("Failed to fetch channels from the Settings link. It might be blocked or invalid.");
                                 allChannelsData = dbChannels;
                                 document.getElementById('loading-spinner').style.display = 'none';
                                 generateCategoryFilters(); displayChannels(allChannelsData);
