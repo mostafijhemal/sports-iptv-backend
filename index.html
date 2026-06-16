@@ -124,6 +124,7 @@
             <button onclick="deleteAllChannels()" style="background: #ff2a5f; color: white; border: none; padding: 10px 20px; border-radius: 25px; font-weight: 800; cursor: pointer;">🗑️ Delete All</button>
             <button id="bulk-delete-btn" onclick="bulkDelete()" style="background: #ff8c00; color: white; border: none; padding: 10px 20px; border-radius: 25px; font-weight: 800; cursor: pointer; display: none;">🗑️ Delete Selected (0)</button>
             <button id="bulk-move-btn" onclick="bulkMove()" style="background: #17a2b8; color: white; border: none; padding: 10px 20px; border-radius: 25px; font-weight: 800; cursor: pointer; display: none;">📂 Move Selected (0)</button>
+            <button onclick="openSettingsModal()" style="background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 25px; font-weight: 800; cursor: pointer;">⚙️ Settings</button>
             <button onclick="toggleAuth()" style="background: #333; color: white; border: none; padding: 10px 20px; border-radius: 25px; font-weight: 800; cursor: pointer;">🚪 Sign Out</button>
         </div>
 
@@ -185,6 +186,18 @@
             </div>
         </div>
 
+        <div id="settings-modal" class="modal-overlay hidden">
+            <div class="admin-panel">
+                <span class="close-modal" onclick="closeModal('settings-modal')">&times;</span>
+                <h2>⚙️ App Settings</h2>
+                <form id="settings-form">
+                    <label style="display: block; margin-bottom: 5px; color: #ff2a5f; font-weight: bold; text-align: left;">Auto-Update JSON Link:</label>
+                    <div class="form-group"><input type="url" id="settings-json-url" placeholder="https://raw.githubusercontent.com/..." style="margin-top: 5px;"></div>
+                    <button type="submit" class="submit-btn" style="background: #28a745;">Save Link</button>
+                </form>
+            </div>
+        </div>
+
         <div id="category-modal" class="modal-overlay hidden">
             <div class="admin-panel">
                 <span class="close-modal" onclick="closeModal('category-modal')">&times;</span>
@@ -215,7 +228,7 @@
         // ==========================================
         const API_BASE_URL = 'https://sports-iptv-backend.onrender.com';
         // এখানে আপনার কপি করা গিটহাবের JSON লিংকটি বসিয়ে দিন
-        const AUTO_JSON_URL = 'https://raw.githubusercontent.com/freelancerrakib2007/toffee-auto/refs/heads/main/channels.json';
+        let AUTO_JSON_URL = ''; // এখন এটি ডেটাবেস থেকে আসবে
 
         const videoElement = document.getElementById('my-video');
         const channelGrid = document.getElementById('channels');
@@ -381,10 +394,18 @@
         }
 
         function loadChannels() {
-            document.getElementById('loading-spinner').style.display = 'block'; // লোডিং শুরু
-            document.getElementById('channels').innerHTML = ''; // আগের চ্যানেল হাইড
+            document.getElementById('loading-spinner').style.display = 'block'; 
+            document.getElementById('channels').innerHTML = ''; 
 
-            fetch(`${API_BASE_URL}/api/channels`)
+            // প্রথমে ডেটাবেস থেকে অটো-আপডেট লিংক আনবে
+            fetch(`${API_BASE_URL}/api/settings/auto-json`)
+                .then(res => res.json())
+                .then(settingData => {
+                    AUTO_JSON_URL = settingData.url || ''; // লিংক সেট হলো
+                    
+                    // এবার ডেটাবেসের চ্যানেলগুলো আনবে
+                    return fetch(`${API_BASE_URL}/api/channels`);
+                })
                 .then(res => res.json())
                 .then(dbChannels => {
                     if(AUTO_JSON_URL !== '' && AUTO_JSON_URL.includes('http')) {
@@ -399,7 +420,7 @@
                                     isAuto: true
                                 }));
                                 allChannelsData = [...dbChannels, ...formattedAutoChannels];
-                                document.getElementById('loading-spinner').style.display = 'none'; // লোডিং শেষ
+                                document.getElementById('loading-spinner').style.display = 'none'; 
                                 generateCategoryFilters(); 
                                 displayChannels(allChannelsData);
                             })
@@ -415,7 +436,8 @@
                     }
                 })
                 .catch(err => {
-                    document.getElementById('loading-spinner').innerText = '❌ Error connecting to database.';
+                    document.getElementById('loading-spinner').style.display = 'none';
+                    alert("System Error -> Error connecting to database.");
                 });
         }
 
@@ -727,6 +749,46 @@
                 });
             }
         }
+
+        // সেটিংস মোডাল ওপেন করা
+        function openSettingsModal() {
+            document.getElementById('settings-json-url').value = AUTO_JSON_URL;
+            openModal('settings-modal');
+        }
+
+        // নতুন লিংক ডেটাবেসে সেভ করা
+        document.getElementById('settings-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const submitBtn = this.querySelector('.submit-btn');
+            const originalText = submitBtn.innerText;
+            submitBtn.innerText = "⏳ Saving...";
+            submitBtn.disabled = true;
+
+            const newUrl = document.getElementById('settings-json-url').value;
+
+            fetch(`${API_BASE_URL}/api/settings/auto-json`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: newUrl })
+            })
+            .then(async res => {
+                if (!res.ok) {
+                    const err = await res.text(); throw new Error(err);
+                }
+                return res.json();
+            })
+            .then(data => {
+                alert(data.message);
+                AUTO_JSON_URL = newUrl; // ফ্রন্টএন্ডেও লিংক আপডেট
+                closeModal('settings-modal');
+                loadChannels(); // নতুন লিংকের চ্যানেল লোড করতে রিলোড
+            })
+            .catch(err => alert("Error: " + err.message))
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerText = originalText;
+            });
+        });
 
         updateUI(); loadChannels();
     </script>

@@ -32,6 +32,9 @@ class ChannelUpdate(BaseModel):
 class BulkDelete(BaseModel):
     ids: List[int]
 
+class SettingsUpdate(BaseModel):
+    url: str
+
 class BulkCategoryUpdate(BaseModel):
     ids: List[int]
     new_category: str
@@ -59,6 +62,16 @@ def init_db():
             url TEXT NOT NULL
         )
     ''')
+    # নতুন সেটিংস টেবিল তৈরি
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        )
+    ''')
+    # ডিফল্ট একটি ফাঁকা লিংক তৈরি করে রাখা (যদি না থাকে)
+    cursor.execute("INSERT INTO settings (key, value) VALUES ('auto_json_url', '') ON CONFLICT (key) DO NOTHING")
+
     conn.commit()
     conn.close()
 
@@ -252,3 +265,24 @@ async def upload_m3u(file: UploadFile = File(...)):
     conn.commit()
     conn.close()
     return {"message": "Playlist uploaded and channels extracted successfully!"}
+
+# ==========================================
+# Settings API (For Auto JSON Link)
+# ==========================================
+@app.get("/api/settings/auto-json")
+def get_auto_json():
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    cursor.execute("SELECT value FROM settings WHERE key = 'auto_json_url'")
+    result = cursor.fetchone()
+    conn.close()
+    return {"url": result['value'] if result else ""}
+
+@app.put("/api/settings/auto-json")
+def update_auto_json(data: SettingsUpdate):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE settings SET value = %s WHERE key = 'auto_json_url'", (data.url,))
+    conn.commit()
+    conn.close()
+    return {"message": "Auto JSON link updated successfully!"}
