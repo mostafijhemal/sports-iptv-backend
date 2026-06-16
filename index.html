@@ -397,34 +397,68 @@
             document.getElementById('loading-spinner').style.display = 'block'; 
             document.getElementById('channels').innerHTML = ''; 
 
-            // প্রথমে ডেটাবেস থেকে অটো-আপডেট লিংক আনবে
             fetch(`${API_BASE_URL}/api/settings/auto-json`)
                 .then(res => res.json())
                 .then(settingData => {
-                    AUTO_JSON_URL = settingData.url || ''; // লিংক সেট হলো
-                    
-                    // এবার ডেটাবেসের চ্যানেলগুলো আনবে
+                    AUTO_JSON_URL = settingData.url || ''; 
                     return fetch(`${API_BASE_URL}/api/channels`);
                 })
                 .then(res => res.json())
                 .then(dbChannels => {
                     if(AUTO_JSON_URL !== '' && AUTO_JSON_URL.includes('http')) {
+                        // প্রথমে লিংকটি টেক্সট হিসেবে আনা হচ্ছে
                         fetch(AUTO_JSON_URL)
-                            .then(res => res.json())
-                            .then(autoChannels => {
-                                const formattedAutoChannels = autoChannels.map(ch => ({
-                                    id: 'auto-' + Math.random(),
-                                    name: ch.name || ch.title || ch.channel_name || 'Unknown Channel',
-                                    category: ch.category || ch.group_title || ch.group || 'Auto Updated',
-                                    url: ch.url || ch.link || ch.stream_url,
-                                    isAuto: true
-                                }));
+                            .then(res => res.text()) 
+                            .then(textData => {
+                                let formattedAutoChannels = [];
+
+                                // যদি লিংকটি M3U ফরম্যাটের হয়
+                                if(textData.includes('#EXTM3U') || AUTO_JSON_URL.endsWith('.m3u')) {
+                                    const lines = textData.split('\n');
+                                    let currentName = 'Unknown Channel';
+                                    let currentCategory = 'Auto M3U';
+
+                                    for(let line of lines) {
+                                        line = line.trim();
+                                        if(line.startsWith('#EXTINF')) {
+                                            const nameMatch = line.match(/,(.*)$/);
+                                            if(nameMatch) currentName = nameMatch[1].trim();
+                                            
+                                            const catMatch = line.match(/(?:group-title|tvg-group)="([^"]+)"/i);
+                                            if(catMatch) currentCategory = catMatch[1].trim();
+                                            else currentCategory = 'Auto M3U';
+                                        } 
+                                        else if (line.startsWith('http')) {
+                                            formattedAutoChannels.push({
+                                                id: 'auto-' + Math.random(),
+                                                name: currentName,
+                                                category: currentCategory,
+                                                url: line,
+                                                isAuto: true
+                                            });
+                                            currentName = 'Unknown Channel'; // রিসেট
+                                        }
+                                    }
+                                } 
+                                // যদি লিংকটি JSON ফরম্যাটের হয়
+                                else {
+                                    const jsonData = JSON.parse(textData);
+                                    formattedAutoChannels = jsonData.map(ch => ({
+                                        id: 'auto-' + Math.random(),
+                                        name: ch.name || ch.title || ch.channel_name || 'Unknown Channel',
+                                        category: ch.category || ch.group_title || ch.group || 'Auto JSON',
+                                        url: ch.url || ch.link || ch.stream_url,
+                                        isAuto: true
+                                    }));
+                                }
+
                                 allChannelsData = [...dbChannels, ...formattedAutoChannels];
                                 document.getElementById('loading-spinner').style.display = 'none'; 
                                 generateCategoryFilters(); 
                                 displayChannels(allChannelsData);
                             })
                             .catch(err => {
+                                console.error("Auto Fetch Error:", err);
                                 allChannelsData = dbChannels;
                                 document.getElementById('loading-spinner').style.display = 'none';
                                 generateCategoryFilters(); displayChannels(allChannelsData);
